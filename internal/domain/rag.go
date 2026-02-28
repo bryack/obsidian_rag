@@ -2,10 +2,12 @@ package domain
 
 import "fmt"
 
-type RagEngine struct{}
+type RagEngine struct {
+	store VectorStore
+}
 
-func NewRagEngine() *RagEngine {
-	return &RagEngine{}
+func NewRagEngine(store VectorStore) *RagEngine {
+	return &RagEngine{store: store}
 }
 
 func (re *RagEngine) Ask(question string) (string, error) {
