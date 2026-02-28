@@ -20,13 +20,13 @@ func (re *RagEngine) Ask(question string) (string, error) {
 	return "", fmt.Errorf("failed to answer")
 }
 
-func (re *RagEngine) Sync(path string) error {
+func (re *RagEngine) Sync() error {
 	hashes, err := re.store.GetAllHashes()
 	if err != nil {
 		return fmt.Errorf("failed to get hashes: %w", err)
 	}
 
-	chunks, err := re.repo.GetNotes(path)
+	chunks, err := re.repo.GetNotes()
 	if err != nil {
 		return fmt.Errorf("failed to get notes: %w", err)
 	}
@@ -40,6 +40,5 @@ func (re *RagEngine) Sync(path string) error {
 			}
 		}
 	}
-
 	return nil
 }

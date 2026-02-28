@@ -32,7 +32,7 @@ type StubNoteRepository struct {
 	doc Document
 }
 
-func (s *StubNoteRepository) GetNotes(dirPath string) (Chunks, error) {
+func (s *StubNoteRepository) GetNotes() (Chunks, error) {
 	return Chunks{s.doc}, nil
 }
 
@@ -51,16 +51,23 @@ func TestRagEngine_Ask(t *testing.T) {
 
 func TestRagEngine_Sync(t *testing.T) {
 	store := &SpyVectorStore{}
-	repo := &StubNoteRepository{}
+	repo := &StubNoteRepository{
+		doc: Document{FilePath: "note.md", Hash: "v1"},
+	}
 	engine := NewRagEngine(repo, store)
 
-	err := engine.Sync("any-path")
+	err := engine.Sync()
 	assert.NoError(t, err)
 	assert.Equal(t, 1, store.saveCalled)
-	assert.True(t, len(store.hashes) > 0)
+	assert.Equal(t, "v1", store.hashes["note.md"])
 
-	err = engine.Sync("any-path")
+	err = engine.Sync()
 	assert.NoError(t, err)
 	assert.Equal(t, 1, store.saveCalled)
 
+	repo.doc.Hash = "v2"
+	err = engine.Sync()
+	assert.NoError(t, err)
+	assert.Equal(t, 2, store.saveCalled)
+	assert.Equal(t, "v2", store.hashes["note.md"])
 }

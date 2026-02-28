@@ -7,7 +7,7 @@ type VectorStore interface {
 }
 
 type NoteRepository interface {
-	GetNotes(dirPath string) (Chunks, error)
+	GetNotes() (Chunks, error)
 }
 
 type Document struct {
