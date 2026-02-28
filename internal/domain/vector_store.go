@@ -3,6 +3,7 @@ package domain
 type VectorStore interface {
 	Save(doc Document) error
 	Search(query string) (Chunks, error)
+	GetAllHashes() (map[string]string, error)
 }
 
 type NoteRepository interface {
