@@ -17,6 +17,19 @@ func TestRagEngine_Ask(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, "Obsidian RAG: Ответ найден в ваших заметках.", answer)
 	})
+
+	t.Run("real search", func(t *testing.T) {
+		store := &SpyVectorStore{}
+		repo := &StubNoteRepository{}
+		store.Save(Document{Content: "В Obsidian RAG используется Go."})
+
+		engine := NewRagEngine(repo, store)
+
+		answer, err := engine.Ask("На чем написан проект?")
+
+		assert.NoError(t, err)
+		assert.Contains(t, answer, "Go")
+	})
 }
 
 func TestRagEngine_Sync(t *testing.T) {

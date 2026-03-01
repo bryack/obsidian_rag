@@ -3,10 +3,12 @@ package domain
 type SpyVectorStore struct {
 	SaveCalled int
 	Hashes     map[string]string
+	Documents  []Document
 }
 
 func (s *SpyVectorStore) Save(doc Document) error {
 	s.SaveCalled++
+	s.Documents = append(s.Documents, doc)
 	if s.Hashes == nil {
 		s.Hashes = make(map[string]string)
 	}
@@ -15,7 +17,7 @@ func (s *SpyVectorStore) Save(doc Document) error {
 }
 
 func (s *SpyVectorStore) Search(query string) ([]Document, error) {
-	return []Document{}, nil
+	return s.Documents, nil
 }
 
 func (s *SpyVectorStore) GetAllHashes() (map[string]string, error) {
