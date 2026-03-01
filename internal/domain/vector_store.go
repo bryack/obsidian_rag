@@ -2,12 +2,12 @@ package domain
 
 type VectorStore interface {
 	Save(doc Document) error
-	Search(query string) (Chunks, error)
+	Search(query string) ([]Document, error)
 	GetAllHashes() (map[string]string, error)
 }
 
 type NoteRepository interface {
-	GetNotes() (Chunks, error)
+	GetNotes() ([]Document, error)
 }
 
 type Document struct {
@@ -16,5 +16,3 @@ type Document struct {
 	Content  string
 	Metadata map[string]interface{}
 }
-
-type Chunks []Document

@@ -17,8 +17,8 @@ func NewRepository(fileSystem fs.FS) *Repository {
 	return &Repository{fileSystem: fileSystem}
 }
 
-func (r *Repository) GetNotes() (domain.Chunks, error) {
-	var chunks domain.Chunks
+func (r *Repository) GetNotes() ([]domain.Document, error) {
+	var chunks []domain.Document
 
 	err := fs.WalkDir(r.fileSystem, ".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {

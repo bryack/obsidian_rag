@@ -40,5 +40,6 @@ func (re *RagEngine) Sync() error {
 			}
 		}
 	}
+	fmt.Printf("Indexed %d notes\n", len(chunks))
 	return nil
 }
