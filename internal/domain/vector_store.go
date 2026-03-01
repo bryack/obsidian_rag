@@ -14,5 +14,10 @@ type Document struct {
 	FilePath string
 	Hash     string
 	Content  string
-	Metadata map[string]interface{}
+	Metadata Metadata
+}
+
+type Metadata struct {
+	Tags    []string `yaml:"tags"`
+	Project []string `yaml:"project"`
 }

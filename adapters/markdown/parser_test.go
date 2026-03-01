@@ -1,21 +1,71 @@
 package markdown
 
 import (
+	"os"
 	"testing"
 
 	"github.com/bryack/obsidian_rag/internal/domain"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-func TestParse_SimpleContent(t *testing.T) {
-	testDoc := domain.Document{
-		Content: "Hello World",
-	}
+var maxChunkSize = 500
 
-	parser := MDParser{}
-	docs, err := parser.Parse(testDoc)
-	assert.NoError(t, err)
+func TestParse(t *testing.T) {
+	t.Run("simple content", func(t *testing.T) {
+		testDoc := domain.Document{
+			Content: "Hello World",
+		}
 
-	assert.Equal(t, 1, len(docs))
-	assert.Equal(t, "Hello World", docs[0].Content)
+		parser := NewMDParser(maxChunkSize)
+		docs, err := parser.Parse(testDoc)
+		assert.NoError(t, err)
+
+		assert.Equal(t, 1, len(docs))
+		assert.Equal(t, "Hello World", docs[0].Content)
+	})
+
+	t.Run("with frontmatter", func(t *testing.T) {
+		contentWithYAML := `---
+tags:
+  - obsidian
+  - rag
+project: [obsidian-rag]
+---
+Real content here`
+
+		testDoc := domain.Document{
+			Content: contentWithYAML,
+		}
+		parser := NewMDParser(maxChunkSize)
+		docs, err := parser.Parse(testDoc)
+		assert.NoError(t, err)
+
+		assert.Equal(t, []string{"obsidian", "rag"}, docs[0].Metadata.Tags)
+		assert.Equal(t, []string{"obsidian-rag"}, docs[0].Metadata.Project)
+		assert.Equal(t, "Real content here", docs[0].Content)
+	})
+
+	t.Run("splitting", func(t *testing.T) {
+		testFile := "testdata.md"
+		testData, err := os.ReadFile(testFile)
+		require.NoError(t, err)
+
+		testDoc := domain.Document{
+			FilePath: testFile,
+			Content:  string(testData),
+		}
+
+		parser := NewMDParser(maxChunkSize)
+		chunks, err := parser.Parse(testDoc)
+		assert.NoError(t, err)
+
+		assert.True(t, len(chunks) > 1, "Expected content to be split into multiple chunks")
+		for i, chunk := range chunks {
+			assert.Equal(t, "testdata.md", chunk.FilePath, "Chunk %d missing FilePath", i)
+			assert.Equal(t, []string{"tdd"}, chunk.Metadata.Tags, "Chunk %d missing Tags", i)
+			assert.NotEmpty(t, chunk.Content, "Chunk %d is empty", i)
+			assert.LessOrEqual(t, len(chunk.Content), maxChunkSize+500, "Chunk too large")
+		}
+	})
 }
