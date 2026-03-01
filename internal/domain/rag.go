@@ -5,19 +5,26 @@ import (
 )
 
 type RagEngine struct {
-	repo  NoteRepository
-	store VectorStore
+	repo   NoteRepository
+	store  VectorStore
+	parser Parser
 }
 
-func NewRagEngine(repo NoteRepository, store VectorStore) *RagEngine {
-	return &RagEngine{store: store, repo: repo}
+func NewRagEngine(repo NoteRepository, store VectorStore, parser Parser) *RagEngine {
+	return &RagEngine{store: store, repo: repo, parser: parser}
 }
 
 func (re *RagEngine) Ask(question string) (string, error) {
-	if question == "Что такое Obsidian RAG?" {
-		return "Obsidian RAG: Ответ найден в ваших заметках.", nil
+	chunks, err := re.store.Search(question)
+	if err != nil {
+		return "", fmt.Errorf("failed to search info for question: %q: %w", question, err)
 	}
-	return "", fmt.Errorf("failed to answer")
+
+	if len(chunks) == 0 {
+		return "", fmt.Errorf("can't find any documents for question %q", question)
+	}
+
+	return chunks[0].Content, nil
 }
 
 func (re *RagEngine) Sync() error {
@@ -26,20 +33,26 @@ func (re *RagEngine) Sync() error {
 		return fmt.Errorf("failed to get hashes: %w", err)
 	}
 
-	chunks, err := re.repo.GetNotes()
+	docs, err := re.repo.GetNotes()
 	if err != nil {
 		return fmt.Errorf("failed to get notes: %w", err)
 	}
 
-	for _, doc := range chunks {
+	for _, doc := range docs {
 		existingHash, ok := hashes[doc.FilePath]
 		if !ok || existingHash != doc.Hash {
-			err := re.store.Save(doc)
+			parcedChunks, err := re.parser.Parse(doc)
 			if err != nil {
-				return fmt.Errorf("failed to save document: %w", err)
+				return fmt.Errorf("failed to parse doc %q: %w", doc.FilePath, err)
+			}
+			for _, chunk := range parcedChunks {
+				err := re.store.Save(chunk)
+				if err != nil {
+					return fmt.Errorf("failed to save document: %w", err)
+				}
 			}
 		}
 	}
-	fmt.Printf("Indexed %d notes\n", len(chunks))
+	fmt.Printf("Indexed %d notes\n", len(docs))
 	return nil
 }

@@ -5,8 +5,11 @@ import (
 	"os"
 
 	"github.com/bryack/obsidian_rag/adapters/filerepo"
+	"github.com/bryack/obsidian_rag/adapters/markdown"
 	"github.com/bryack/obsidian_rag/internal/domain"
 )
+
+const chunkSize = 500
 
 func main() {
 	if len(os.Args) < 3 {
@@ -19,7 +22,8 @@ func main() {
 
 	store := &domain.SpyVectorStore{}
 	repo := filerepo.NewRepository(os.DirFS(vaultPath))
-	engine := domain.NewRagEngine(repo, store)
+	parser := markdown.NewMDParser(chunkSize)
+	engine := domain.NewRagEngine(repo, store, parser)
 
 	switch command {
 	case "index":

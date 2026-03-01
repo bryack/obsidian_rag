@@ -11,7 +11,7 @@ type RAGProvider interface {
 }
 
 func RAGSpecification(t testing.TB, provider RAGProvider) {
-	answer, err := provider.Ask("Что такое Obsidian RAG?")
+	answer, err := provider.Ask("Что такое Обсидиан?")
 	assert.NoError(t, err)
-	assert.NotZero(t, answer)
+	assert.Contains(t, answer, "база знаний")
 }

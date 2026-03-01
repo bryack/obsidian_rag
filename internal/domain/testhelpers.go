@@ -31,3 +31,9 @@ type StubNoteRepository struct {
 func (s *StubNoteRepository) GetNotes() ([]Document, error) {
 	return []Document{s.Doc}, nil
 }
+
+type StubParser struct{}
+
+func (p *StubParser) Parse(doc Document) ([]Document, error) {
+	return []Document{doc}, nil
+}

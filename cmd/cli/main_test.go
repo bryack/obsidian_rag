@@ -26,9 +26,14 @@ func TestRAGCLI(t *testing.T) {
 		}
 	})
 
+	tempDir := t.TempDir()
+	filePath := filepath.Join(tempDir, "test.md")
+	os.WriteFile(filePath, []byte("Обсидиан — это база знаний."), 0644)
+
 	driver := cli.Driver{
 		PathToBinary: binaryPath,
-		TempDir:      t.TempDir(),
+		WorkingDir:   tempDir,
+		VaultPath:    tempDir,
 	}
 	specifications.RAGSpecification(t, &driver)
 }
