@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/bryack/obsidian_rag/internal/domain"
+	"github.com/google/uuid"
 	"github.com/qdrant/go-client/qdrant"
 )
 
@@ -71,9 +72,49 @@ func (q *QdrantStore) ensureCollection() error {
 }
 
 func (q *QdrantStore) Save(doc domain.Document) error {
-	return fmt.Errorf("not implemented")
+	ctx := context.Background()
+	pointID := uuid.New().String()
+
+	waitUpsert := true
+	_, err := q.client.Upsert(ctx, &qdrant.UpsertPoints{
+		CollectionName: collectionName,
+		Wait:           &waitUpsert,
+		Points: []*qdrant.PointStruct{
+			{
+				Id:      qdrant.NewID(pointID),
+				Vectors: qdrant.NewVectors(doc.Embedding...),
+				Payload: map[string]*qdrant.Value{
+					"file_path": qdrant.NewValueString(doc.FilePath),
+					"hash":      qdrant.NewValueString(doc.Hash),
+					"content":   qdrant.NewValueString(doc.Content),
+				},
+			},
+		},
+	})
+	return err
 }
 
-func (q *QdrantStore) Search(query string) ([]domain.Document, error) {
-	return []domain.Document{}, fmt.Errorf("not implemented")
+func (q *QdrantStore) Search(vector []float32) ([]domain.Document, error) {
+	ctx := context.Background()
+
+	result, err := q.client.Query(ctx, &qdrant.QueryPoints{
+		CollectionName: collectionName,
+		Query:          qdrant.NewQuery(vector...),
+		Limit:          qdrant.PtrOf(uint64(1)),
+		WithPayload:    qdrant.NewWithPayload(true),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed get result from query: %w", err)
+	}
+
+	var docs []domain.Document
+	for _, p := range result {
+		docs = append(docs, domain.Document{
+			FilePath: p.Payload["file_path"].GetStringValue(),
+			Hash:     p.Payload["hash"].GetStringValue(),
+			Content:  p.Payload["content"].GetStringValue(),
+		})
+	}
+
+	return docs, nil
 }
