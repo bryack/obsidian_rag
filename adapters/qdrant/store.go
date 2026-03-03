@@ -10,7 +10,10 @@ import (
 	"github.com/qdrant/go-client/qdrant"
 )
 
-const collectionName = "obsidian_notes"
+const (
+	collectionName = "obsidian_notes"
+	VectorSize     = 1024
+)
 
 type QdrantStore struct {
 	client *qdrant.Client
@@ -56,7 +59,7 @@ func (q *QdrantStore) ensureCollection() error {
 		err := q.client.CreateCollection(ctx, &qdrant.CreateCollection{
 			CollectionName: collectionName,
 			VectorsConfig: qdrant.NewVectorsConfig(&qdrant.VectorParams{
-				Size:     1024,
+				Size:     VectorSize,
 				Distance: qdrant.Distance_Cosine,
 			}),
 		})
