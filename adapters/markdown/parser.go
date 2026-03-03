@@ -40,8 +40,13 @@ func (p *MDParser) Parse(doc domain.Document) ([]domain.Document, error) {
 
 	cleanContent := ""
 	if docNode.HasChildren() {
-		start := docNode.FirstChild().Lines().At(0).Start
-		cleanContent = string(source[start:])
+		for child := docNode.FirstChild(); child != nil; child = child.NextSibling() {
+			if child.Lines().Len() > 0 {
+				start := child.Lines().At(0).Start
+				cleanContent = string(source[start:])
+				break
+			}
+		}
 	}
 
 	splitter := textsplitter.NewRecursiveCharacter(
