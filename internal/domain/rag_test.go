@@ -16,8 +16,9 @@ func TestRagEngine_Ask(t *testing.T) {
 		}
 		repo := &StubNoteRepository{}
 		parser := &StubParser{}
+		embedder := &StubEmbedder{}
 
-		engine := NewRagEngine(repo, store, parser)
+		engine := NewRagEngine(repo, store, parser, embedder)
 		engine.Sync()
 
 		answer, err := engine.Ask("На чем написан проект?")
@@ -33,7 +34,9 @@ func TestRagEngine_Sync(t *testing.T) {
 		Doc: Document{FilePath: "note.md", Hash: "v1"},
 	}
 	parser := &StubParser{}
-	engine := NewRagEngine(repo, store, parser)
+	embedder := &StubEmbedder{}
+
+	engine := NewRagEngine(repo, store, parser, embedder)
 
 	err := engine.Sync()
 	assert.NoError(t, err)

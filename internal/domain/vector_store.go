@@ -10,11 +10,16 @@ type NoteRepository interface {
 	GetNotes() ([]Document, error)
 }
 
+type Embedder interface {
+	Embed(text string) ([]float32, error)
+}
+
 type Document struct {
-	FilePath string
-	Hash     string
-	Content  string
-	Metadata Metadata
+	FilePath  string
+	Hash      string
+	Content   string
+	Metadata  Metadata
+	Embedding []float32
 }
 
 type Metadata struct {

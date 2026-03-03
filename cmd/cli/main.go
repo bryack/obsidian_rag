@@ -23,7 +23,9 @@ func main() {
 	store := &domain.SpyVectorStore{}
 	repo := filerepo.NewRepository(os.DirFS(vaultPath))
 	parser := markdown.NewMDParser(chunkSize)
-	engine := domain.NewRagEngine(repo, store, parser)
+	embedder := &domain.StubEmbedder{}
+
+	engine := domain.NewRagEngine(repo, store, parser, embedder)
 
 	switch command {
 	case "index":

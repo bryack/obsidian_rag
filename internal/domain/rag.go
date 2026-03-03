@@ -5,13 +5,14 @@ import (
 )
 
 type RagEngine struct {
-	repo   NoteRepository
-	store  VectorStore
-	parser Parser
+	repo     NoteRepository
+	store    VectorStore
+	parser   Parser
+	embedder Embedder
 }
 
-func NewRagEngine(repo NoteRepository, store VectorStore, parser Parser) *RagEngine {
-	return &RagEngine{store: store, repo: repo, parser: parser}
+func NewRagEngine(repo NoteRepository, store VectorStore, parser Parser, embedder Embedder) *RagEngine {
+	return &RagEngine{store: store, repo: repo, parser: parser, embedder: embedder}
 }
 
 func (re *RagEngine) Ask(question string) (string, error) {
