@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestRagEngine_Ask(t *testing.T) {
@@ -31,10 +32,10 @@ func TestRagEngine_Ask(t *testing.T) {
 func TestRagEngine_Sync(t *testing.T) {
 	store := &SpyVectorStore{}
 	repo := &StubNoteRepository{
-		Doc: Document{FilePath: "note.md", Hash: "v1"},
+		Doc: Document{FilePath: "note.md", Hash: "v1", Content: "Hello!"},
 	}
 	parser := &StubParser{}
-	embedder := &StubEmbedder{}
+	embedder := &StubEmbedder{vector: []float32{0.1, 0.2}}
 
 	engine := NewRagEngine(repo, store, parser, embedder)
 
@@ -42,6 +43,8 @@ func TestRagEngine_Sync(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 1, store.SaveCalled)
 	assert.Equal(t, "v1", store.Hashes["note.md"])
+	require.Len(t, store.Documents, 1)
+	assert.Equal(t, []float32{0.1, 0.2}, store.Documents[0].Embedding, "Document should be embedded before saving")
 
 	err = engine.Sync()
 	assert.NoError(t, err)

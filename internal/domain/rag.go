@@ -51,8 +51,13 @@ func (re *RagEngine) Sync() error {
 				return fmt.Errorf("failed to parse doc %q: %w", doc.FilePath, err)
 			}
 			for _, chunk := range parcedChunks {
-				err := re.store.Save(chunk)
+				vector, err := re.embedder.Embed(chunk.Content)
 				if err != nil {
+					return fmt.Errorf("failed to embed chunk content for file %q: %w", doc.FilePath, err)
+				}
+				chunk.Embedding = vector
+
+				if err = re.store.Save(chunk); err != nil {
 					return fmt.Errorf("failed to save document: %w", err)
 				}
 			}
