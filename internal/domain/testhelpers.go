@@ -1,7 +1,5 @@
 package domain
 
-import "fmt"
-
 type SpyVectorStore struct {
 	SaveCalled int
 	Hashes     map[string]string
@@ -18,7 +16,7 @@ func (s *SpyVectorStore) Save(doc Document) error {
 	return nil
 }
 
-func (s *SpyVectorStore) Search(query string) ([]Document, error) {
+func (s *SpyVectorStore) Search(vector []float32) ([]Document, error) {
 	return s.Documents, nil
 }
 
@@ -40,8 +38,10 @@ func (p *StubParser) Parse(doc Document) ([]Document, error) {
 	return []Document{doc}, nil
 }
 
-type StubEmbedder struct{}
+type StubEmbedder struct {
+	vector []float32
+}
 
 func (e *StubEmbedder) Embed(text string) ([]float32, error) {
-	return nil, fmt.Errorf("not implemented")
+	return e.vector, nil
 }

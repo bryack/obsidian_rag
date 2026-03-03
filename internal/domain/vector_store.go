@@ -2,7 +2,7 @@ package domain
 
 type VectorStore interface {
 	Save(doc Document) error
-	Search(query string) ([]Document, error)
+	Search(vector []float32) ([]Document, error)
 	GetAllHashes() (map[string]string, error)
 }
 

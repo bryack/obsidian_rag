@@ -16,7 +16,11 @@ func NewRagEngine(repo NoteRepository, store VectorStore, parser Parser, embedde
 }
 
 func (re *RagEngine) Ask(question string) (string, error) {
-	chunks, err := re.store.Search(question)
+	vector, err := re.embedder.Embed(question)
+	if err != nil {
+		return "", fmt.Errorf("failed to get vector for question %q: %w", question, err)
+	}
+	chunks, err := re.store.Search(vector)
 	if err != nil {
 		return "", fmt.Errorf("failed to search info for question: %q: %w", question, err)
 	}
