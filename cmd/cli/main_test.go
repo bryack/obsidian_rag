@@ -2,15 +2,21 @@ package main_test
 
 import (
 	"bytes"
+	"context"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"sync"
 	"testing"
 
 	"github.com/bryack/obsidian_rag/adapters/cli"
 	"github.com/bryack/obsidian_rag/specifications"
+	"github.com/stretchr/testify/require"
+	"github.com/testcontainers/testcontainers-go/modules/qdrant"
 )
 
 func TestRAGCLI(t *testing.T) {
@@ -19,12 +25,25 @@ func TestRAGCLI(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	ctx := context.Background()
+
+	container, err := qdrant.Run(ctx, "qdrant/qdrant:latest")
+	require.NoError(t, err)
+
 	t.Cleanup(func() {
+		if err := container.Terminate(ctx); err != nil {
+			t.Fatalf("failed to terminate container: %s", err)
+		}
 		err := os.RemoveAll(filepath.Dir(binaryPath))
 		if err != nil {
 			t.Logf("Warning: failed to remove temp directory: %v", err)
 		}
 	})
+
+	grpcEndpoint, err := container.GRPCEndpoint(ctx)
+	require.NoError(t, err)
+
+	fakeOllama := setupFakeOllama(t)
 
 	tempDir := t.TempDir()
 	filePath := filepath.Join(tempDir, "test.md")
@@ -34,6 +53,8 @@ func TestRAGCLI(t *testing.T) {
 		PathToBinary: binaryPath,
 		WorkingDir:   tempDir,
 		VaultPath:    tempDir,
+		QdrantAddr:   grpcEndpoint,
+		OllamaURL:    fakeOllama,
 	}
 	specifications.RAGSpecification(t, &driver)
 }
@@ -76,4 +97,14 @@ func buildBinaryPath() (string, error) {
 	}
 
 	return binPath, nil
+}
+
+func setupFakeOllama(t *testing.T) string {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		vectorStr := strings.Repeat("0,", 1023) + "0"
+		fmt.Fprintf(w, "{\"embeddings\": [[%s]]}", vectorStr)
+	}))
+	t.Cleanup(server.Close)
+	return server.URL + "/api/embed"
 }

@@ -1,29 +1,46 @@
 package main
 
 import (
+	"flag"
 	"fmt"
+	"log"
 	"os"
 
 	"github.com/bryack/obsidian_rag/adapters/filerepo"
 	"github.com/bryack/obsidian_rag/adapters/markdown"
+	"github.com/bryack/obsidian_rag/adapters/ollama"
+	"github.com/bryack/obsidian_rag/adapters/qdrant"
 	"github.com/bryack/obsidian_rag/internal/domain"
 )
 
-const chunkSize = 500
+const (
+	chunkSize      = 500
+	embedModelName = "argus-ai/pplx-embed-v1-0.6b:fp32"
+)
+
+var (
+	qdrantAddr = flag.String("qdrant", "localhost:6334", "qdrant gRPC address")
+	ollamaURL  = flag.String("ollama", "http://localhost:11434/api/embed", "ollama embedding URL")
+)
 
 func main() {
-	if len(os.Args) < 3 {
-		fmt.Println("Usage: obsidian-rag <command> <vault_path> [question]")
+	flag.Parse()
+	args := flag.Args()
+	if len(args) < 2 {
+		fmt.Println("Usage: obsidian-rag [flags] <command> <vault_path> [question]")
 		return
 	}
 
-	command := os.Args[1]
-	vaultPath := os.Args[2]
+	command := args[0]
+	vaultPath := args[1]
 
-	store := &domain.SpyVectorStore{}
+	store, err := qdrant.NewQdrantStore(*qdrantAddr)
+	if err != nil {
+		log.Fatal(err)
+	}
 	repo := filerepo.NewRepository(os.DirFS(vaultPath))
 	parser := markdown.NewMDParser(chunkSize)
-	embedder := &domain.StubEmbedder{}
+	embedder := ollama.NewOllamaEmbedder(embedModelName, *ollamaURL)
 
 	engine := domain.NewRagEngine(repo, store, parser, embedder)
 
@@ -35,7 +52,7 @@ func main() {
 			os.Exit(1)
 		}
 	case "ask":
-		if len(os.Args) < 4 {
+		if len(args) < 3 {
 			fmt.Println("Usage: obsidian-rag ask <vault_path> <question>")
 			return
 		}
@@ -44,7 +61,7 @@ func main() {
 			fmt.Fprintf(os.Stderr, "Index error: %v\n", err)
 			os.Exit(1)
 		}
-		answer, err := engine.Ask(os.Args[3])
+		answer, err := engine.Ask(args[2])
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
@@ -52,6 +69,5 @@ func main() {
 		fmt.Println(answer)
 	default:
 		fmt.Printf("Unknown command: %q\n", command)
-
 	}
 }
