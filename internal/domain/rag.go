@@ -64,5 +64,8 @@ func (re *RagEngine) Sync() error {
 		}
 	}
 	fmt.Printf("Indexed %d notes\n", len(docs))
+	for i := 0; i < len(docs); i += 100 {
+		fmt.Println(docs[i].FilePath)
+	}
 	return nil
 }

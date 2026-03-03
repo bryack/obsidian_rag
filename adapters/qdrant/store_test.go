@@ -37,6 +37,7 @@ func TestQdrant_Integration(t *testing.T) {
 
 	doc := domain.Document{
 		FilePath:  "note.md",
+		Hash:      "hash-of-file",
 		Content:   "В Obsidian RAG используется Go.",
 		Embedding: testVector,
 	}
@@ -44,10 +45,18 @@ func TestQdrant_Integration(t *testing.T) {
 	err = store.Save(doc)
 	require.NoError(t, err)
 
-	result, err := store.Search(testVector)
-	require.NoError(t, err)
+	t.Run("Search returns Document", func(t *testing.T) {
+		result, err := store.Search(testVector)
+		require.NoError(t, err)
 
-	require.NotEmpty(t, result)
-	assert.Equal(t, "note.md", result[0].FilePath)
-	assert.Equal(t, "В Obsidian RAG используется Go.", result[0].Content)
+		require.NotEmpty(t, result)
+		assert.Equal(t, "note.md", result[0].FilePath)
+		assert.Equal(t, "В Obsidian RAG используется Go.", result[0].Content)
+	})
+
+	t.Run("GetAllHashes returns saved hashes", func(t *testing.T) {
+		hashes, err := store.GetAllHashes()
+		require.NoError(t, err)
+		assert.Equal(t, doc.Hash, hashes["note.md"])
+	})
 }

@@ -45,7 +45,27 @@ func (q *QdrantStore) GetAllHashes() (map[string]string, error) {
 	if err := q.ensureCollection(); err != nil {
 		return nil, err
 	}
-	return map[string]string{}, nil
+
+	ctx := context.Background()
+	hashes := make(map[string]string)
+
+	result, err := q.client.Scroll(ctx, &qdrant.ScrollPoints{
+		CollectionName: collectionName,
+		WithPayload:    qdrant.NewWithPayload(true),
+		Limit:          qdrant.PtrOf(uint32(10000)),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to scroll points: %w", err)
+	}
+
+	for _, p := range result {
+		filepath := p.Payload["file_path"].GetStringValue()
+		hash := p.Payload["hash"].GetStringValue()
+		if filepath != "" {
+			hashes[filepath] = hash
+		}
+	}
+	return hashes, nil
 }
 
 func (q *QdrantStore) ensureCollection() error {
