@@ -4,6 +4,7 @@ type VectorStore interface {
 	Save(doc Document) error
 	Search(vector []float32) ([]Document, error)
 	GetAllHashes() (map[string]string, error)
+	SaveBatch(docs []Document) error
 }
 
 type NoteRepository interface {

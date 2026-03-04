@@ -71,4 +71,30 @@ func TestQdrant_Integration(t *testing.T) {
 
 		assert.Equal(t, initialCount, finalCount)
 	})
+
+	t.Run("save batch", func(t *testing.T) {
+		testVector1 := make([]float32, 1024)
+		testVector1[1] = 1.0
+		testVector2 := make([]float32, 1024)
+		testVector2[2] = 1.0
+		testVector3 := make([]float32, 1024)
+		testVector3[3] = 1.0
+		docs := []domain.Document{
+			{FilePath: "note1.md", Hash: "hash-of-file1", Content: "В Obsidian RAG используется Ollama.", Embedding: testVector1},
+			{FilePath: "note2.md", Hash: "hash-of-file2", Content: "В Obsidian RAG используется Qdrant.", Embedding: testVector2},
+			{FilePath: "note3.md", Hash: "hash-of-file3", Content: "В Obsidian RAG используется Goldmark.", Embedding: testVector3},
+		}
+
+		err := store.SaveBatch(docs)
+		assert.NoError(t, err)
+
+		for _, v := range docs {
+			result, err := store.Search(v.Embedding)
+			assert.NoError(t, err)
+			assert.NotEmpty(t, result)
+
+			assert.Equal(t, v.FilePath, result[0].FilePath, "Should find correct file for vector")
+			assert.Equal(t, v.Content, result[0].Content)
+		}
+	})
 }

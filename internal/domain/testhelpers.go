@@ -24,6 +24,15 @@ func (s *SpyVectorStore) GetAllHashes() (map[string]string, error) {
 	return s.Hashes, nil
 }
 
+func (s *SpyVectorStore) SaveBatch(docs []Document) error {
+	for _, doc := range docs {
+		if err := s.Save(doc); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 type StubNoteRepository struct {
 	Doc Document
 }

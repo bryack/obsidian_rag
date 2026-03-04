@@ -106,24 +106,29 @@ func (q *QdrantStore) ensureCollection() error {
 
 func (q *QdrantStore) Save(doc domain.Document) error {
 	ctx := context.Background()
-	data := doc.FilePath + doc.Content
-	pointID := uuid.NewSHA1(obsidianNamespace, []byte(data))
 
 	waitUpsert := true
 	_, err := q.client.Upsert(ctx, &qdrant.UpsertPoints{
 		CollectionName: collectionName,
 		Wait:           &waitUpsert,
-		Points: []*qdrant.PointStruct{
-			{
-				Id:      qdrant.NewID(pointID.String()),
-				Vectors: qdrant.NewVectors(doc.Embedding...),
-				Payload: map[string]*qdrant.Value{
-					"file_path": qdrant.NewValueString(doc.FilePath),
-					"hash":      qdrant.NewValueString(doc.Hash),
-					"content":   qdrant.NewValueString(doc.Content),
-				},
-			},
-		},
+		Points:         []*qdrant.PointStruct{q.toPoint(doc)},
+	})
+	return err
+}
+
+func (q *QdrantStore) SaveBatch(docs []domain.Document) error {
+	ctx := context.Background()
+	var points []*qdrant.PointStruct
+
+	for _, doc := range docs {
+		points = append(points, q.toPoint(doc))
+	}
+
+	waitUpsert := true
+	_, err := q.client.Upsert(ctx, &qdrant.UpsertPoints{
+		CollectionName: collectionName,
+		Wait:           &waitUpsert,
+		Points:         points,
 	})
 	return err
 }
@@ -151,6 +156,22 @@ func (q *QdrantStore) Search(vector []float32) ([]domain.Document, error) {
 	}
 
 	return docs, nil
+}
+
+func (q *QdrantStore) toPoint(doc domain.Document) *qdrant.PointStruct {
+	data := doc.FilePath + doc.Content
+	pointID := uuid.NewSHA1(obsidianNamespace, []byte(data))
+
+	return &qdrant.PointStruct{
+		Id:      qdrant.NewID(pointID.String()),
+		Vectors: qdrant.NewVectors(doc.Embedding...),
+		Payload: map[string]*qdrant.Value{
+			"file_path": qdrant.NewValueString(doc.FilePath),
+			"hash":      qdrant.NewValueString(doc.Hash),
+			"content":   qdrant.NewValueString(doc.Content),
+		},
+	}
+
 }
 
 func (q *QdrantStore) CountPoints() (uint64, error) {
