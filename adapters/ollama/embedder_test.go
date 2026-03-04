@@ -97,3 +97,17 @@ func TestOllamaEmbedder_Batch(t *testing.T) {
 		assert.Equal(t, 1024, len(vector))
 	}
 }
+
+func BenchmarkOllamaEmbedder_Batch(b *testing.B) {
+	embedder := NewOllamaEmbedder(modelName, baseURL+"/api/embed")
+	texts := make([]string, 32)
+	for i := range texts {
+		texts[i] = "Это тестовая строка для проверки скорости генерации вектора."
+	}
+
+	b.ResetTimer()
+	for b.Loop() {
+		_, err := embedder.EmbedDocuments(texts)
+		require.NoError(b, err)
+	}
+}

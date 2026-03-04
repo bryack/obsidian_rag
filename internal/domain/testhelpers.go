@@ -34,11 +34,11 @@ func (s *SpyVectorStore) SaveBatch(docs []Document) error {
 }
 
 type StubNoteRepository struct {
-	Doc Document
+	Docs []Document
 }
 
 func (s *StubNoteRepository) GetNotes() ([]Document, error) {
-	return []Document{s.Doc}, nil
+	return s.Docs, nil
 }
 
 type StubParser struct {

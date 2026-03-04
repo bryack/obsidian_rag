@@ -44,6 +44,8 @@ func (re *RagEngine) Sync() error {
 	}
 
 	fmt.Printf("Debug: Found %d existing hashes in DB\n", len(hashes))
+
+	var allNewChunks []Document
 	for i, doc := range docs {
 		existingHash, ok := hashes[doc.FilePath]
 		if !ok || existingHash != doc.Hash {
@@ -59,24 +61,36 @@ func (re *RagEngine) Sync() error {
 					Content:  "",
 				})
 			}
+			allNewChunks = append(allNewChunks, parcedChunks...)
 			fmt.Printf("[%d/%d] Indexed: %s\n", i+1, len(docs), doc.FilePath)
+		}
+	}
 
-			var textToEmbed []string
-			for _, chunk := range parcedChunks {
-				textToEmbed = append(textToEmbed, chunk.Content)
-			}
+	batchSize := 32
+	for i := 0; i < len(allNewChunks); i += batchSize {
+		end := i + batchSize
+		if end > len(allNewChunks) {
+			end = len(allNewChunks)
+		}
 
-			vectors, err := re.embedder.EmbedDocuments(textToEmbed)
-			if err != nil {
-				return fmt.Errorf("failed to embed chunk content for file %q: %w", doc.FilePath, err)
-			}
+		batch := allNewChunks[i:end]
 
-			for j, vector := range vectors {
-				parcedChunks[j].Embedding = vector
-				if err = re.store.Save(parcedChunks[j]); err != nil {
-					return fmt.Errorf("failed to save document: %w", err)
-				}
-			}
+		var textToEmbed []string
+		for _, c := range batch {
+			textToEmbed = append(textToEmbed, c.Content)
+		}
+
+		vectors, err := re.embedder.EmbedDocuments(textToEmbed)
+		if err != nil {
+			return fmt.Errorf("failed to embed chunk content: %w", err)
+		}
+
+		for j := range batch {
+			batch[j].Embedding = vectors[j]
+		}
+
+		if err = re.store.SaveBatch(batch); err != nil {
+			return fmt.Errorf("failed to save document: %w", err)
 		}
 	}
 	fmt.Printf("Indexed %d notes\n", len(docs))
