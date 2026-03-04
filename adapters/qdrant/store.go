@@ -16,6 +16,8 @@ const (
 	VectorSize     = 1024
 )
 
+var obsidianNamespace = uuid.MustParse("f3f2e850-b5d4-11ef-ac7e-96584d5248b2")
+
 type QdrantStore struct {
 	client *qdrant.Client
 }
@@ -33,7 +35,6 @@ func NewQdrantStore(grpcEndpoint string) (*QdrantStore, error) {
 	client, err := qdrant.NewClient(&qdrant.Config{
 		Host: host,
 		Port: port,
-		// GrpcOptions: []grpc.DialOption{},
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create qdrant client: %w", err)
@@ -105,7 +106,8 @@ func (q *QdrantStore) ensureCollection() error {
 
 func (q *QdrantStore) Save(doc domain.Document) error {
 	ctx := context.Background()
-	pointID := uuid.New().String()
+	data := doc.FilePath + doc.Content
+	pointID := uuid.NewSHA1(obsidianNamespace, []byte(data))
 
 	waitUpsert := true
 	_, err := q.client.Upsert(ctx, &qdrant.UpsertPoints{
@@ -113,7 +115,7 @@ func (q *QdrantStore) Save(doc domain.Document) error {
 		Wait:           &waitUpsert,
 		Points: []*qdrant.PointStruct{
 			{
-				Id:      qdrant.NewID(pointID),
+				Id:      qdrant.NewID(pointID.String()),
 				Vectors: qdrant.NewVectors(doc.Embedding...),
 				Payload: map[string]*qdrant.Value{
 					"file_path": qdrant.NewValueString(doc.FilePath),
