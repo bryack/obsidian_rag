@@ -45,16 +45,20 @@ func (re *RagEngine) Sync() error {
 
 	fmt.Printf("Debug: Found %d existing hashes in DB\n", len(hashes))
 	for i, doc := range docs {
-		if i < 3 {
-			fmt.Printf("Debug: Checking file: %q, exists in DB: %v\n", doc.FilePath, hashes[doc.FilePath] != "")
-		}
-
 		existingHash, ok := hashes[doc.FilePath]
 		if !ok || existingHash != doc.Hash {
 			fmt.Printf("Debug: File %s not found in DB hashes\n", doc.FilePath)
 			parcedChunks, err := re.parser.Parse(doc)
 			if err != nil {
 				return fmt.Errorf("failed to parse doc %q: %w", doc.FilePath, err)
+			}
+			if len(parcedChunks) == 0 {
+				parcedChunks = append(parcedChunks, Document{
+					FilePath: doc.FilePath,
+					Hash:     doc.Hash,
+					Metadata: doc.Metadata,
+					Content:  "",
+				})
 			}
 			fmt.Printf("[%d/%d] Indexed: %s\n", i+1, len(docs), doc.FilePath)
 
