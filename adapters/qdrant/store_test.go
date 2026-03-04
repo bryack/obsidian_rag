@@ -59,4 +59,16 @@ func TestQdrant_Integration(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, doc.Hash, hashes["note.md"])
 	})
+	t.Run("double Save does not increase the number of points", func(t *testing.T) {
+		initialCount, err := store.CountPoints()
+		require.NoError(t, err)
+
+		err = store.Save(doc)
+		require.NoError(t, err)
+
+		finalCount, err := store.CountPoints()
+		require.NoError(t, err)
+
+		assert.Equal(t, initialCount, finalCount)
+	})
 }

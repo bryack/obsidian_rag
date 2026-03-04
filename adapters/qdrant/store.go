@@ -150,3 +150,11 @@ func (q *QdrantStore) Search(vector []float32) ([]domain.Document, error) {
 
 	return docs, nil
 }
+
+func (q *QdrantStore) CountPoints() (uint64, error) {
+	info, err := q.client.GetCollectionInfo(context.Background(), collectionName)
+	if err != nil {
+		return 0, err
+	}
+	return *info.PointsCount, err
+}
