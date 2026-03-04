@@ -48,7 +48,7 @@ func TestOllama_HealthCheck(t *testing.T) {
 
 	t.Run("VRAM load", func(t *testing.T) {
 		warmupEmbedder := NewOllamaEmbedder(modelName, baseURL+"/api/embed")
-		_, err := warmupEmbedder.Embed("warmup")
+		_, err := warmupEmbedder.EmbedQuery("warmup")
 		require.NoError(t, err, "Failed to warmup model for VRAM check")
 
 		response, err := http.Get(baseURL + "/api/ps")
@@ -80,7 +80,20 @@ func TestOllama_HealthCheck(t *testing.T) {
 func TestOllamaEmbedder(t *testing.T) {
 	embedder := NewOllamaEmbedder(modelName, baseURL+"/api/embed")
 
-	vector, err := embedder.Embed("Привет!")
+	vector, err := embedder.EmbedQuery("Привет!")
 	assert.NoError(t, err)
 	assert.Equal(t, qdrant.VectorSize, len(vector))
+}
+
+func TestOllamaEmbedder_Batch(t *testing.T) {
+	chunksContent := []string{"привет", "пока"}
+	embedder := NewOllamaEmbedder(modelName, baseURL+"/api/embed")
+
+	vectors, err := embedder.EmbedDocuments(chunksContent)
+	assert.NoError(t, err)
+	assert.Equal(t, 2, len(vectors))
+
+	for _, vector := range vectors {
+		assert.Equal(t, 1024, len(vector))
+	}
 }

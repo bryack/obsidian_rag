@@ -40,17 +40,19 @@ func (p *StubParser) Parse(doc Document) ([]Document, error) {
 	return p.Items, nil
 }
 
-type StubEmbedder struct {
+type SpyEmbedder struct {
 	vector []float32
+	Calls  [][]string
 }
 
-func (e *StubEmbedder) EmbedQuery(text string) ([]float32, error) {
+func (e *SpyEmbedder) EmbedQuery(text string) ([]float32, error) {
 	return e.vector, nil
 }
 
-func (e *StubEmbedder) EmbedDocuments(text []string) ([][]float32, error) {
-	res := make([][]float32, len(text))
-	for i := range text {
+func (e *SpyEmbedder) EmbedDocuments(texts []string) ([][]float32, error) {
+	e.Calls = append(e.Calls, texts)
+	res := make([][]float32, len(texts))
+	for i := range texts {
 		res[i] = e.vector
 	}
 	return res, nil

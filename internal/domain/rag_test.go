@@ -17,7 +17,7 @@ func TestRagEngine_Ask(t *testing.T) {
 		}
 		repo := &StubNoteRepository{}
 		parser := &StubParser{}
-		embedder := &StubEmbedder{}
+		embedder := &SpyEmbedder{}
 
 		engine := NewRagEngine(repo, store, parser, embedder)
 		engine.Sync()
@@ -36,7 +36,7 @@ func TestRagEngine_Sync(t *testing.T) {
 			Doc: Document{FilePath: "note.md", Hash: "v1", Content: "Hello!"},
 		}
 		parser := &StubParser{Items: []Document{{FilePath: "note.md", Hash: "v1", Content: "Hello!"}}}
-		embedder := &StubEmbedder{vector: []float32{0.1, 0.2}}
+		embedder := &SpyEmbedder{vector: []float32{0.1, 0.2}}
 
 		engine := NewRagEngine(repo, store, parser, embedder)
 
@@ -64,12 +64,27 @@ func TestRagEngine_Sync(t *testing.T) {
 			Doc: Document{FilePath: "document.md", Hash: "d1", Content: ""},
 		}
 		parser := &StubParser{}
-		embedder := &StubEmbedder{vector: []float32{0.1, 0.2}}
+		embedder := &SpyEmbedder{vector: []float32{0.1, 0.2}}
 
 		engine := NewRagEngine(repo, store, parser, embedder)
 
 		err := engine.Sync()
 		assert.NoError(t, err)
 		assert.Equal(t, 1, store.SaveCalled)
+	})
+	t.Run("batch processing", func(t *testing.T) {
+		store := &SpyVectorStore{}
+		repo := &StubNoteRepository{Doc: Document{FilePath: "batch.md", Hash: "b1"}}
+		parser := &StubParser{Items: []Document{
+			{Content: "chunk 1"}, {Content: "chunk 2"}, {Content: "chunk 3"},
+		}}
+		embedder := &SpyEmbedder{vector: []float32{0.1}}
+
+		engine := NewRagEngine(repo, store, parser, embedder)
+		err := engine.Sync()
+		assert.NoError(t, err)
+
+		assert.Equal(t, 1, len(embedder.Calls), "Expected only 1 call to EmbedDocuments")
+		assert.Equal(t, 3, len(embedder.Calls[0]), "Expected 3 chunks in the first batch")
 	})
 }

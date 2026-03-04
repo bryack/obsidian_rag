@@ -13,8 +13,8 @@ type OllamaEmbedder struct {
 }
 
 type embedRequest struct {
-	Model string `json:"model"`
-	Input string `json:"input"`
+	Model string   `json:"model"`
+	Input []string `json:"input"`
 }
 
 type embedResponse struct {
@@ -28,10 +28,34 @@ func NewOllamaEmbedder(modelName, baseURL string) *OllamaEmbedder {
 	}
 }
 
-func (o *OllamaEmbedder) Embed(text string) ([]float32, error) {
+func (o *OllamaEmbedder) EmbedQuery(text string) ([]float32, error) {
+	res, err := o.send([]string{text})
+	if err != nil {
+		return nil, fmt.Errorf("failed to send text to Ollama: %w", err)
+	}
+
+	if len(res) < 1 {
+		return nil, fmt.Errorf("expected at least 1 embedding, but got 0")
+	}
+	return res[0], err
+}
+
+func (o *OllamaEmbedder) EmbedDocuments(texts []string) ([][]float32, error) {
+	res, err := o.send(texts)
+	if err != nil {
+		return nil, fmt.Errorf("failed to send texts to Ollama: %w", err)
+	}
+
+	if len(res) != len(texts) {
+		return nil, fmt.Errorf("batch size mismatch: sent %d, got %d", len(texts), len(res))
+	}
+	return res, nil
+}
+
+func (o *OllamaEmbedder) send(texts []string) ([][]float32, error) {
 	requestBody, err := json.Marshal(embedRequest{
 		Model: o.ModelName,
-		Input: text,
+		Input: texts,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal json request: %w", err)
@@ -52,5 +76,5 @@ func (o *OllamaEmbedder) Embed(text string) ([]float32, error) {
 		return nil, fmt.Errorf("no embeddings returned")
 	}
 
-	return res.Embeddings[0], nil
+	return res.Embeddings, nil
 }
