@@ -15,8 +15,9 @@ import (
 )
 
 const (
-	chunkSize      = 500
-	embedModelName = "argus-ai/pplx-embed-v1-0.6b:fp32"
+	chunkSize       = 1000
+	mergeChunkLimit = 2000
+	embedModelName  = "argus-ai/pplx-embed-v1-0.6b:fp32"
 )
 
 var (
@@ -41,7 +42,7 @@ func main() {
 		log.Fatal(err)
 	}
 	repo := filerepo.NewRepository(os.DirFS(vaultPath))
-	parser := markdown.NewMDParser(chunkSize)
+	parser := markdown.NewMDParser(chunkSize, mergeChunkLimit)
 	embedder := ollama.NewOllamaEmbedder(embedModelName, *ollamaURL)
 
 	engine := domain.NewRagEngine(repo, store, parser, embedder)

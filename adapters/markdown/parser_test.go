@@ -9,7 +9,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var maxChunkSize = 500
+var (
+	maxChunkSize    = 1000
+	mergeChunkLimit = 2000
+)
 
 func TestParse(t *testing.T) {
 	t.Run("simple content", func(t *testing.T) {
@@ -17,7 +20,7 @@ func TestParse(t *testing.T) {
 			Content: "Hello World",
 		}
 
-		parser := NewMDParser(maxChunkSize)
+		parser := NewMDParser(maxChunkSize, mergeChunkLimit)
 		docs, err := parser.Parse(testDoc)
 		assert.NoError(t, err)
 
@@ -37,7 +40,7 @@ Real content here`
 		testDoc := domain.Document{
 			Content: contentWithYAML,
 		}
-		parser := NewMDParser(maxChunkSize)
+		parser := NewMDParser(maxChunkSize, mergeChunkLimit)
 		docs, err := parser.Parse(testDoc)
 		assert.NoError(t, err)
 
@@ -56,7 +59,7 @@ Real content here`
 			Content:  string(testData),
 		}
 
-		parser := NewMDParser(maxChunkSize)
+		parser := NewMDParser(maxChunkSize, mergeChunkLimit)
 		chunks, err := parser.Parse(testDoc)
 		assert.NoError(t, err)
 
@@ -65,7 +68,7 @@ Real content here`
 			assert.Equal(t, "testdata.md", chunk.FilePath, "Chunk %d missing FilePath", i)
 			assert.Equal(t, []string{"tdd"}, chunk.Metadata.Tags, "Chunk %d missing Tags", i)
 			assert.NotEmpty(t, chunk.Content, "Chunk %d is empty", i)
-			assert.LessOrEqual(t, len(chunk.Content), maxChunkSize+500, "Chunk too large")
+			assert.LessOrEqual(t, len(chunk.Content), maxChunkSize+1500, "Chunk too large")
 		}
 	})
 	t.Run("empty content after yaml", func(t *testing.T) {
@@ -77,9 +80,41 @@ tags: [test]
 		testDoc := domain.Document{
 			Content: content,
 		}
-		parser := NewMDParser(maxChunkSize)
+		parser := NewMDParser(maxChunkSize, mergeChunkLimit)
 
 		_, err := parser.Parse(testDoc)
 		assert.NoError(t, err)
 	})
+}
+
+func TestMDParser_Aggregation(t *testing.T) {
+	content := `---
+tags: [test]
+---
+                                    
+Это текст, который должен быть в одном чанке, а не в нескольких.
+                                                                
+                                      
+[00:35:56] Это текст, который должен быть в одном чанке, а не в нескольких.
+                    
+                                             
+[00:35:56] Это текст, который должен быть в одном чанке, а не в нескольких.
+                                           
+                                                          
+## Тут заголовок, который относится к этому же чанку
+[00:35:56] Это текст, который должен быть в одном чанке, а не в нескольких.
+                           
+
+                                                  
+### Тут небольшой заголовок
+[00:35:56] Это текст, который должен быть в одном чанке, а не в нескольких.`
+
+	testDoc := domain.Document{
+		Content: content,
+	}
+
+	parser := NewMDParser(500, mergeChunkLimit)
+	docs, err := parser.Parse(testDoc)
+	assert.NoError(t, err)
+	assert.Equal(t, 1, len(docs))
 }
