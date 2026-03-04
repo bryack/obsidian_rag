@@ -24,6 +24,7 @@ type Document struct {
 	Content   string
 	Metadata  Metadata
 	Embedding []float32
+	Score     float32
 }
 
 type Metadata struct {

@@ -32,7 +32,15 @@ func (re *RagEngine) Ask(ctx context.Context, question string) (string, error) {
 		return "", fmt.Errorf("can't find any documents for question %q", question)
 	}
 
-	return chunks[0].Content, nil
+	var builder strings.Builder
+	builder.WriteString(fmt.Sprintf("Результаты поиска для: %q\n\n", question))
+	for i, chunk := range chunks {
+		builder.WriteString(fmt.Sprintf("[%d] (Score: %.4f) Файл: %s\n", i+1, chunk.Score, chunk.FilePath))
+		builder.WriteString(chunk.Content + "\n")
+		builder.WriteString("------------------------------------------\n\n")
+	}
+
+	return builder.String(), nil
 }
 
 func (re *RagEngine) Sync(ctx context.Context) error {

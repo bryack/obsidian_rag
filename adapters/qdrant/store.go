@@ -131,7 +131,7 @@ func (q *QdrantStore) Search(ctx context.Context, vector []float32) ([]domain.Do
 	result, err := q.client.Query(ctx, &qdrant.QueryPoints{
 		CollectionName: collectionName,
 		Query:          qdrant.NewQuery(vector...),
-		Limit:          qdrant.PtrOf(uint64(1)),
+		Limit:          qdrant.PtrOf(uint64(5)),
 		WithPayload:    qdrant.NewWithPayload(true),
 	})
 	if err != nil {
@@ -144,6 +144,7 @@ func (q *QdrantStore) Search(ctx context.Context, vector []float32) ([]domain.Do
 			FilePath: p.Payload["file_path"].GetStringValue(),
 			Hash:     p.Payload["hash"].GetStringValue(),
 			Content:  p.Payload["content"].GetStringValue(),
+			Score:    p.Score,
 		})
 	}
 
