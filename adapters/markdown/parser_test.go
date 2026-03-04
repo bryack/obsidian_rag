@@ -68,4 +68,18 @@ Real content here`
 			assert.LessOrEqual(t, len(chunk.Content), maxChunkSize+500, "Chunk too large")
 		}
 	})
+	t.Run("empty content after yaml", func(t *testing.T) {
+		content := `---
+tags: [test]
+---
+# `
+
+		testDoc := domain.Document{
+			Content: content,
+		}
+		parser := NewMDParser(maxChunkSize)
+
+		_, err := parser.Parse(testDoc)
+		assert.NoError(t, err)
+	})
 }

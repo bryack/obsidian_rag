@@ -32,10 +32,12 @@ func (s *StubNoteRepository) GetNotes() ([]Document, error) {
 	return []Document{s.Doc}, nil
 }
 
-type StubParser struct{}
+type StubParser struct {
+	Items []Document
+}
 
 func (p *StubParser) Parse(doc Document) ([]Document, error) {
-	return []Document{doc}, nil
+	return p.Items, nil
 }
 
 type StubEmbedder struct {

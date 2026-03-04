@@ -33,6 +33,7 @@ func NewQdrantStore(grpcEndpoint string) (*QdrantStore, error) {
 	client, err := qdrant.NewClient(&qdrant.Config{
 		Host: host,
 		Port: port,
+		// GrpcOptions: []grpc.DialOption{},
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create qdrant client: %w", err)
@@ -49,22 +50,33 @@ func (q *QdrantStore) GetAllHashes() (map[string]string, error) {
 	ctx := context.Background()
 	hashes := make(map[string]string)
 
-	result, err := q.client.Scroll(ctx, &qdrant.ScrollPoints{
-		CollectionName: collectionName,
-		WithPayload:    qdrant.NewWithPayload(true),
-		Limit:          qdrant.PtrOf(uint32(10000)),
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to scroll points: %w", err)
+	var offset *qdrant.PointId
+
+	for {
+		result, err := q.client.Scroll(ctx, &qdrant.ScrollPoints{
+			CollectionName: collectionName,
+			WithPayload:    qdrant.NewWithPayloadInclude("file_path", "hash"),
+			Limit:          qdrant.PtrOf(uint32(1000)),
+			Offset:         offset,
+		})
+
+		if err != nil {
+			return nil, fmt.Errorf("failed to scroll points: %w", err)
+		}
+
+		for _, p := range result {
+			filepath, okPath := p.Payload["file_path"]
+			hash, okHash := p.Payload["hash"]
+			if okPath && okHash {
+				hashes[filepath.GetStringValue()] = hash.GetStringValue()
+			}
+		}
+		if len(result) < 1000 {
+			break
+		}
+		offset = result[len(result)-1].Id
 	}
 
-	for _, p := range result {
-		filepath := p.Payload["file_path"].GetStringValue()
-		hash := p.Payload["hash"].GetStringValue()
-		if filepath != "" {
-			hashes[filepath] = hash
-		}
-	}
 	return hashes, nil
 }
 

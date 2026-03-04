@@ -30,29 +30,45 @@ func TestRagEngine_Ask(t *testing.T) {
 }
 
 func TestRagEngine_Sync(t *testing.T) {
-	store := &SpyVectorStore{}
-	repo := &StubNoteRepository{
-		Doc: Document{FilePath: "note.md", Hash: "v1", Content: "Hello!"},
-	}
-	parser := &StubParser{}
-	embedder := &StubEmbedder{vector: []float32{0.1, 0.2}}
+	t.Run("happy path", func(t *testing.T) {
+		store := &SpyVectorStore{}
+		repo := &StubNoteRepository{
+			Doc: Document{FilePath: "note.md", Hash: "v1", Content: "Hello!"},
+		}
+		parser := &StubParser{}
+		embedder := &StubEmbedder{vector: []float32{0.1, 0.2}}
 
-	engine := NewRagEngine(repo, store, parser, embedder)
+		engine := NewRagEngine(repo, store, parser, embedder)
 
-	err := engine.Sync()
-	assert.NoError(t, err)
-	assert.Equal(t, 1, store.SaveCalled)
-	assert.Equal(t, "v1", store.Hashes["note.md"])
-	require.Len(t, store.Documents, 1)
-	assert.Equal(t, []float32{0.1, 0.2}, store.Documents[0].Embedding, "Document should be embedded before saving")
+		err := engine.Sync()
+		assert.NoError(t, err)
+		assert.Equal(t, 1, store.SaveCalled)
+		assert.Equal(t, "v1", store.Hashes["note.md"])
+		require.Len(t, store.Documents, 1)
+		assert.Equal(t, []float32{0.1, 0.2}, store.Documents[0].Embedding, "Document should be embedded before saving")
 
-	err = engine.Sync()
-	assert.NoError(t, err)
-	assert.Equal(t, 1, store.SaveCalled)
+		err = engine.Sync()
+		assert.NoError(t, err)
+		assert.Equal(t, 1, store.SaveCalled)
 
-	repo.Doc.Hash = "v2"
-	err = engine.Sync()
-	assert.NoError(t, err)
-	assert.Equal(t, 2, store.SaveCalled)
-	assert.Equal(t, "v2", store.Hashes["note.md"])
+		repo.Doc.Hash = "v2"
+		err = engine.Sync()
+		assert.NoError(t, err)
+		assert.Equal(t, 2, store.SaveCalled)
+		assert.Equal(t, "v2", store.Hashes["note.md"])
+	})
+	t.Run("empty file", func(t *testing.T) {
+		store := &SpyVectorStore{}
+		repo := &StubNoteRepository{
+			Doc: Document{FilePath: "note.md", Hash: "v1", Content: ""},
+		}
+		parser := &StubParser{}
+		embedder := &StubEmbedder{vector: []float32{0.1, 0.2}}
+
+		engine := NewRagEngine(repo, store, parser, embedder)
+
+		err := engine.Sync()
+		assert.NoError(t, err)
+		assert.Equal(t, 1, store.SaveCalled)
+	})
 }

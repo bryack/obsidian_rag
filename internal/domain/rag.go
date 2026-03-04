@@ -43,13 +43,21 @@ func (re *RagEngine) Sync() error {
 		return fmt.Errorf("failed to get notes: %w", err)
 	}
 
-	for _, doc := range docs {
+	fmt.Printf("Debug: Found %d existing hashes in DB\n", len(hashes))
+	for i, doc := range docs {
+		if i < 3 {
+			fmt.Printf("Debug: Checking file: %q, exists in DB: %v\n", doc.FilePath, hashes[doc.FilePath] != "")
+		}
+
 		existingHash, ok := hashes[doc.FilePath]
 		if !ok || existingHash != doc.Hash {
+			fmt.Printf("Debug: File %s not found in DB hashes\n", doc.FilePath)
 			parcedChunks, err := re.parser.Parse(doc)
 			if err != nil {
 				return fmt.Errorf("failed to parse doc %q: %w", doc.FilePath, err)
 			}
+			fmt.Printf("[%d/%d] Indexed: %s\n", i+1, len(docs), doc.FilePath)
+
 			for _, chunk := range parcedChunks {
 				vector, err := re.embedder.Embed(chunk.Content)
 				if err != nil {
@@ -64,8 +72,5 @@ func (re *RagEngine) Sync() error {
 		}
 	}
 	fmt.Printf("Indexed %d notes\n", len(docs))
-	for i := 0; i < len(docs); i += 100 {
-		fmt.Println(docs[i].FilePath)
-	}
 	return nil
 }
