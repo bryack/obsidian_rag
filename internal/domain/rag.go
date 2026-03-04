@@ -16,7 +16,7 @@ func NewRagEngine(repo NoteRepository, store VectorStore, parser Parser, embedde
 }
 
 func (re *RagEngine) Ask(question string) (string, error) {
-	vector, err := re.embedder.Embed(question)
+	vector, err := re.embedder.EmbedQuery(question)
 	if err != nil {
 		return "", fmt.Errorf("failed to get vector for question %q: %w", question, err)
 	}
@@ -63,11 +63,11 @@ func (re *RagEngine) Sync() error {
 			fmt.Printf("[%d/%d] Indexed: %s\n", i+1, len(docs), doc.FilePath)
 
 			for _, chunk := range parcedChunks {
-				vector, err := re.embedder.Embed(chunk.Content)
+				vector, err := re.embedder.EmbedDocuments([]string{chunk.Content})
 				if err != nil {
 					return fmt.Errorf("failed to embed chunk content for file %q: %w", doc.FilePath, err)
 				}
-				chunk.Embedding = vector
+				chunk.Embedding = vector[0]
 
 				if err = re.store.Save(chunk); err != nil {
 					return fmt.Errorf("failed to save document: %w", err)

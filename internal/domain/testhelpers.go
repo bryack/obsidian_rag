@@ -44,6 +44,14 @@ type StubEmbedder struct {
 	vector []float32
 }
 
-func (e *StubEmbedder) Embed(text string) ([]float32, error) {
+func (e *StubEmbedder) EmbedQuery(text string) ([]float32, error) {
 	return e.vector, nil
+}
+
+func (e *StubEmbedder) EmbedDocuments(text []string) ([][]float32, error) {
+	res := make([][]float32, len(text))
+	for i := range text {
+		res[i] = e.vector
+	}
+	return res, nil
 }

@@ -11,7 +11,8 @@ type NoteRepository interface {
 }
 
 type Embedder interface {
-	Embed(text string) ([]float32, error)
+	EmbedQuery(text string) ([]float32, error)
+	EmbedDocuments(text []string) ([][]float32, error)
 }
 
 type Document struct {
