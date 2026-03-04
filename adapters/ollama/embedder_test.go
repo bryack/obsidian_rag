@@ -1,6 +1,7 @@
 package ollama
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"testing"
@@ -48,7 +49,7 @@ func TestOllama_HealthCheck(t *testing.T) {
 
 	t.Run("VRAM load", func(t *testing.T) {
 		warmupEmbedder := NewOllamaEmbedder(modelName, baseURL+"/api/embed")
-		_, err := warmupEmbedder.EmbedQuery("warmup")
+		_, err := warmupEmbedder.EmbedQuery(context.Background(), "warmup")
 		require.NoError(t, err, "Failed to warmup model for VRAM check")
 
 		response, err := http.Get(baseURL + "/api/ps")
@@ -80,7 +81,7 @@ func TestOllama_HealthCheck(t *testing.T) {
 func TestOllamaEmbedder(t *testing.T) {
 	embedder := NewOllamaEmbedder(modelName, baseURL+"/api/embed")
 
-	vector, err := embedder.EmbedQuery("Привет!")
+	vector, err := embedder.EmbedQuery(context.Background(), "Привет!")
 	assert.NoError(t, err)
 	assert.Equal(t, qdrant.VectorSize, len(vector))
 }
@@ -89,7 +90,7 @@ func TestOllamaEmbedder_Batch(t *testing.T) {
 	chunksContent := []string{"привет", "пока"}
 	embedder := NewOllamaEmbedder(modelName, baseURL+"/api/embed")
 
-	vectors, err := embedder.EmbedDocuments(chunksContent)
+	vectors, err := embedder.EmbedDocuments(context.Background(), chunksContent)
 	assert.NoError(t, err)
 	assert.Equal(t, 2, len(vectors))
 
@@ -107,7 +108,7 @@ func BenchmarkOllamaEmbedder_Batch(b *testing.B) {
 
 	b.ResetTimer()
 	for b.Loop() {
-		_, err := embedder.EmbedDocuments(texts)
+		_, err := embedder.EmbedDocuments(context.Background(), texts)
 		require.NoError(b, err)
 	}
 }

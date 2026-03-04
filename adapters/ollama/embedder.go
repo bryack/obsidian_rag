@@ -2,6 +2,7 @@ package ollama
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -28,8 +29,8 @@ func NewOllamaEmbedder(modelName, baseURL string) *OllamaEmbedder {
 	}
 }
 
-func (o *OllamaEmbedder) EmbedQuery(text string) ([]float32, error) {
-	res, err := o.send([]string{text})
+func (o *OllamaEmbedder) EmbedQuery(ctx context.Context, text string) ([]float32, error) {
+	res, err := o.send(ctx, []string{text})
 	if err != nil {
 		return nil, fmt.Errorf("failed to send text to Ollama: %w", err)
 	}
@@ -40,8 +41,8 @@ func (o *OllamaEmbedder) EmbedQuery(text string) ([]float32, error) {
 	return res[0], err
 }
 
-func (o *OllamaEmbedder) EmbedDocuments(texts []string) ([][]float32, error) {
-	res, err := o.send(texts)
+func (o *OllamaEmbedder) EmbedDocuments(ctx context.Context, texts []string) ([][]float32, error) {
+	res, err := o.send(ctx, texts)
 	if err != nil {
 		return nil, fmt.Errorf("failed to send texts to Ollama: %w", err)
 	}
@@ -52,7 +53,7 @@ func (o *OllamaEmbedder) EmbedDocuments(texts []string) ([][]float32, error) {
 	return res, nil
 }
 
-func (o *OllamaEmbedder) send(texts []string) ([][]float32, error) {
+func (o *OllamaEmbedder) send(ctx context.Context, texts []string) ([][]float32, error) {
 	requestBody, err := json.Marshal(embedRequest{
 		Model: o.ModelName,
 		Input: texts,
@@ -61,11 +62,14 @@ func (o *OllamaEmbedder) send(texts []string) ([][]float32, error) {
 		return nil, fmt.Errorf("failed to marshal json request: %w", err)
 	}
 
-	response, err := http.Post(o.BaseURL, "application/json", bytes.NewBuffer(requestBody))
+	request, err := http.NewRequestWithContext(ctx, "POST", o.BaseURL, bytes.NewBuffer(requestBody))
 	if err != nil {
 		return nil, fmt.Errorf("failed to post response on URL %q: %w", o.BaseURL, err)
 	}
-	defer response.Body.Close()
+	request.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{}
+	response, err := client.Do(request)
 
 	var res embedResponse
 	if err := json.NewDecoder(response.Body).Decode(&res); err != nil {

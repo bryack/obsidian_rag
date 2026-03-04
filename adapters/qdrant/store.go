@@ -43,12 +43,11 @@ func NewQdrantStore(grpcEndpoint string) (*QdrantStore, error) {
 	return &QdrantStore{client: client}, nil
 }
 
-func (q *QdrantStore) GetAllHashes() (map[string]string, error) {
-	if err := q.ensureCollection(); err != nil {
+func (q *QdrantStore) GetAllHashes(ctx context.Context) (map[string]string, error) {
+	if err := q.ensureCollection(ctx); err != nil {
 		return nil, err
 	}
 
-	ctx := context.Background()
 	hashes := make(map[string]string)
 
 	var offset *qdrant.PointId
@@ -81,9 +80,7 @@ func (q *QdrantStore) GetAllHashes() (map[string]string, error) {
 	return hashes, nil
 }
 
-func (q *QdrantStore) ensureCollection() error {
-	ctx := context.Background()
-
+func (q *QdrantStore) ensureCollection(ctx context.Context) error {
 	exists, err := q.client.CollectionExists(ctx, collectionName)
 	if err != nil {
 		return fmt.Errorf("failed to check collection existence: %w", err)
@@ -104,9 +101,7 @@ func (q *QdrantStore) ensureCollection() error {
 	return nil
 }
 
-func (q *QdrantStore) Save(doc domain.Document) error {
-	ctx := context.Background()
-
+func (q *QdrantStore) Save(ctx context.Context, doc domain.Document) error {
 	waitUpsert := true
 	_, err := q.client.Upsert(ctx, &qdrant.UpsertPoints{
 		CollectionName: collectionName,
@@ -116,8 +111,7 @@ func (q *QdrantStore) Save(doc domain.Document) error {
 	return err
 }
 
-func (q *QdrantStore) SaveBatch(docs []domain.Document) error {
-	ctx := context.Background()
+func (q *QdrantStore) SaveBatch(ctx context.Context, docs []domain.Document) error {
 	var points []*qdrant.PointStruct
 
 	for _, doc := range docs {
@@ -133,9 +127,7 @@ func (q *QdrantStore) SaveBatch(docs []domain.Document) error {
 	return err
 }
 
-func (q *QdrantStore) Search(vector []float32) ([]domain.Document, error) {
-	ctx := context.Background()
-
+func (q *QdrantStore) Search(ctx context.Context, vector []float32) ([]domain.Document, error) {
 	result, err := q.client.Query(ctx, &qdrant.QueryPoints{
 		CollectionName: collectionName,
 		Query:          qdrant.NewQuery(vector...),
@@ -174,8 +166,8 @@ func (q *QdrantStore) toPoint(doc domain.Document) *qdrant.PointStruct {
 
 }
 
-func (q *QdrantStore) CountPoints() (uint64, error) {
-	info, err := q.client.GetCollectionInfo(context.Background(), collectionName)
+func (q *QdrantStore) CountPoints(ctx context.Context) (uint64, error) {
+	info, err := q.client.GetCollectionInfo(ctx, collectionName)
 	if err != nil {
 		return 0, err
 	}

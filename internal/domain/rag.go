@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"context"
 	"fmt"
 )
 
@@ -15,12 +16,12 @@ func NewRagEngine(repo NoteRepository, store VectorStore, parser Parser, embedde
 	return &RagEngine{store: store, repo: repo, parser: parser, embedder: embedder}
 }
 
-func (re *RagEngine) Ask(question string) (string, error) {
-	vector, err := re.embedder.EmbedQuery(question)
+func (re *RagEngine) Ask(ctx context.Context, question string) (string, error) {
+	vector, err := re.embedder.EmbedQuery(ctx, question)
 	if err != nil {
 		return "", fmt.Errorf("failed to get vector for question %q: %w", question, err)
 	}
-	chunks, err := re.store.Search(vector)
+	chunks, err := re.store.Search(ctx, vector)
 	if err != nil {
 		return "", fmt.Errorf("failed to search info for question: %q: %w", question, err)
 	}
@@ -32,8 +33,8 @@ func (re *RagEngine) Ask(question string) (string, error) {
 	return chunks[0].Content, nil
 }
 
-func (re *RagEngine) Sync() error {
-	hashes, err := re.store.GetAllHashes()
+func (re *RagEngine) Sync(ctx context.Context) error {
+	hashes, err := re.store.GetAllHashes(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to get hashes: %w", err)
 	}
@@ -66,6 +67,12 @@ func (re *RagEngine) Sync() error {
 		}
 	}
 
+	fmt.Printf("Debug: Total new chunks to process: %d\n", len(allNewChunks))
+	if len(allNewChunks) == 0 {
+		fmt.Println("Debug: No new chunks found. Skipping batching.")
+		return nil
+	}
+
 	batchSize := 32
 	for i := 0; i < len(allNewChunks); i += batchSize {
 		end := i + batchSize
@@ -80,8 +87,9 @@ func (re *RagEngine) Sync() error {
 			textToEmbed = append(textToEmbed, c.Content)
 		}
 
-		vectors, err := re.embedder.EmbedDocuments(textToEmbed)
+		vectors, err := re.embedder.EmbedDocuments(ctx, textToEmbed)
 		if err != nil {
+			fmt.Printf("DEBUG Error: failed to embed batch of %d texts. First text length: %d\n", len(textToEmbed), len(textToEmbed[0]))
 			return fmt.Errorf("failed to embed chunk content: %w", err)
 		}
 
@@ -89,7 +97,7 @@ func (re *RagEngine) Sync() error {
 			batch[j].Embedding = vectors[j]
 		}
 
-		if err = re.store.SaveBatch(batch); err != nil {
+		if err = re.store.SaveBatch(ctx, batch); err != nil {
 			return fmt.Errorf("failed to save document: %w", err)
 		}
 	}

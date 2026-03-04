@@ -28,7 +28,7 @@ func TestQdrant_Integration(t *testing.T) {
 	store, err := NewQdrantStore(grpcEndpoint)
 	require.NoError(t, err)
 
-	hashes, err := store.GetAllHashes()
+	hashes, err := store.GetAllHashes(ctx)
 	require.NoError(t, err)
 	require.NotNil(t, hashes)
 
@@ -42,11 +42,11 @@ func TestQdrant_Integration(t *testing.T) {
 		Embedding: testVector,
 	}
 
-	err = store.Save(doc)
+	err = store.Save(ctx, doc)
 	require.NoError(t, err)
 
 	t.Run("Search returns Document", func(t *testing.T) {
-		result, err := store.Search(testVector)
+		result, err := store.Search(ctx, testVector)
 		require.NoError(t, err)
 
 		require.NotEmpty(t, result)
@@ -55,18 +55,18 @@ func TestQdrant_Integration(t *testing.T) {
 	})
 
 	t.Run("GetAllHashes returns saved hashes", func(t *testing.T) {
-		hashes, err := store.GetAllHashes()
+		hashes, err := store.GetAllHashes(ctx)
 		require.NoError(t, err)
 		assert.Equal(t, doc.Hash, hashes["note.md"])
 	})
 	t.Run("double Save does not increase the number of points", func(t *testing.T) {
-		initialCount, err := store.CountPoints()
+		initialCount, err := store.CountPoints(ctx)
 		require.NoError(t, err)
 
-		err = store.Save(doc)
+		err = store.Save(ctx, doc)
 		require.NoError(t, err)
 
-		finalCount, err := store.CountPoints()
+		finalCount, err := store.CountPoints(ctx)
 		require.NoError(t, err)
 
 		assert.Equal(t, initialCount, finalCount)
@@ -85,11 +85,11 @@ func TestQdrant_Integration(t *testing.T) {
 			{FilePath: "note3.md", Hash: "hash-of-file3", Content: "В Obsidian RAG используется Goldmark.", Embedding: testVector3},
 		}
 
-		err := store.SaveBatch(docs)
+		err := store.SaveBatch(ctx, docs)
 		assert.NoError(t, err)
 
 		for _, v := range docs {
-			result, err := store.Search(v.Embedding)
+			result, err := store.Search(ctx, v.Embedding)
 			assert.NoError(t, err)
 			assert.NotEmpty(t, result)
 

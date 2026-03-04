@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -10,6 +11,7 @@ import (
 func TestRagEngine_Ask(t *testing.T) {
 
 	t.Run("real search", func(t *testing.T) {
+		ctx := context.Background()
 		store := &SpyVectorStore{
 			Documents: []Document{
 				{Content: "В Obsidian RAG используется Go."},
@@ -20,9 +22,9 @@ func TestRagEngine_Ask(t *testing.T) {
 		embedder := &SpyEmbedder{}
 
 		engine := NewRagEngine(repo, store, parser, embedder)
-		engine.Sync()
+		engine.Sync(ctx)
 
-		answer, err := engine.Ask("На чем написан проект?")
+		answer, err := engine.Ask(ctx, "На чем написан проект?")
 
 		assert.NoError(t, err)
 		assert.Contains(t, answer, "Go")
@@ -31,6 +33,7 @@ func TestRagEngine_Ask(t *testing.T) {
 
 func TestRagEngine_Sync(t *testing.T) {
 	t.Run("happy path", func(t *testing.T) {
+		ctx := context.Background()
 		store := &SpyVectorStore{}
 		repo := &StubNoteRepository{
 			Docs: []Document{{FilePath: "note.md", Hash: "v1", Content: "Hello!"}},
@@ -40,20 +43,20 @@ func TestRagEngine_Sync(t *testing.T) {
 
 		engine := NewRagEngine(repo, store, parser, embedder)
 
-		err := engine.Sync()
+		err := engine.Sync(ctx)
 		assert.NoError(t, err)
 		assert.Equal(t, 1, store.SaveCalled)
 		assert.Equal(t, "v1", store.Hashes["note.md"])
 		require.Len(t, store.Documents, 1)
 		assert.Equal(t, []float32{0.1, 0.2}, store.Documents[0].Embedding, "Document should be embedded before saving")
 
-		err = engine.Sync()
+		err = engine.Sync(ctx)
 		assert.NoError(t, err)
 		assert.Equal(t, 1, store.SaveCalled)
 
 		repo.Docs[0].Hash = "v2"
 		parser.Items[0].Hash = "v2"
-		err = engine.Sync()
+		err = engine.Sync(ctx)
 		assert.NoError(t, err)
 		assert.Equal(t, 2, store.SaveCalled)
 		assert.Equal(t, "v2", store.Hashes["note.md"])
@@ -68,7 +71,7 @@ func TestRagEngine_Sync(t *testing.T) {
 
 		engine := NewRagEngine(repo, store, parser, embedder)
 
-		err := engine.Sync()
+		err := engine.Sync(context.Background())
 		assert.NoError(t, err)
 		assert.Equal(t, 1, store.SaveCalled)
 	})
@@ -86,7 +89,7 @@ func TestRagEngine_Sync(t *testing.T) {
 		embedder := &SpyEmbedder{vector: []float32{0.1}}
 
 		engine := NewRagEngine(repo, store, parser, embedder)
-		err := engine.Sync()
+		err := engine.Sync(context.Background())
 		assert.NoError(t, err)
 
 		assert.Equal(t, 1, len(embedder.Calls), "Expected only 1 call to EmbedDocuments")

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"log"
@@ -24,6 +25,7 @@ var (
 )
 
 func main() {
+	ctx := context.Background()
 	flag.Parse()
 	args := flag.Args()
 	if len(args) < 2 {
@@ -46,7 +48,7 @@ func main() {
 
 	switch command {
 	case "index":
-		err := engine.Sync()
+		err := engine.Sync(ctx)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Index error: %v\n", err)
 			os.Exit(1)
@@ -56,12 +58,12 @@ func main() {
 			fmt.Println("Usage: obsidian-rag ask <vault_path> <question>")
 			return
 		}
-		err := engine.Sync()
+		err := engine.Sync(ctx)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Index error: %v\n", err)
 			os.Exit(1)
 		}
-		answer, err := engine.Ask(args[2])
+		answer, err := engine.Ask(ctx, args[2])
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)

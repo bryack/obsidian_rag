@@ -1,12 +1,14 @@
 package domain
 
+import "context"
+
 type SpyVectorStore struct {
 	SaveCalled int
 	Hashes     map[string]string
 	Documents  []Document
 }
 
-func (s *SpyVectorStore) Save(doc Document) error {
+func (s *SpyVectorStore) Save(ctx context.Context, doc Document) error {
 	s.SaveCalled++
 	s.Documents = append(s.Documents, doc)
 	if s.Hashes == nil {
@@ -16,17 +18,17 @@ func (s *SpyVectorStore) Save(doc Document) error {
 	return nil
 }
 
-func (s *SpyVectorStore) Search(vector []float32) ([]Document, error) {
+func (s *SpyVectorStore) Search(ctx context.Context, vector []float32) ([]Document, error) {
 	return s.Documents, nil
 }
 
-func (s *SpyVectorStore) GetAllHashes() (map[string]string, error) {
+func (s *SpyVectorStore) GetAllHashes(ctx context.Context) (map[string]string, error) {
 	return s.Hashes, nil
 }
 
-func (s *SpyVectorStore) SaveBatch(docs []Document) error {
+func (s *SpyVectorStore) SaveBatch(ctx context.Context, docs []Document) error {
 	for _, doc := range docs {
-		if err := s.Save(doc); err != nil {
+		if err := s.Save(ctx, doc); err != nil {
 			return err
 		}
 	}
@@ -54,11 +56,11 @@ type SpyEmbedder struct {
 	Calls  [][]string
 }
 
-func (e *SpyEmbedder) EmbedQuery(text string) ([]float32, error) {
+func (e *SpyEmbedder) EmbedQuery(ctx context.Context, text string) ([]float32, error) {
 	return e.vector, nil
 }
 
-func (e *SpyEmbedder) EmbedDocuments(texts []string) ([][]float32, error) {
+func (e *SpyEmbedder) EmbedDocuments(ctx context.Context, texts []string) ([][]float32, error) {
 	e.Calls = append(e.Calls, texts)
 	res := make([][]float32, len(texts))
 	for i := range texts {

@@ -1,10 +1,12 @@
 package domain
 
+import "context"
+
 type VectorStore interface {
-	Save(doc Document) error
-	Search(vector []float32) ([]Document, error)
-	GetAllHashes() (map[string]string, error)
-	SaveBatch(docs []Document) error
+	Save(ctx context.Context, doc Document) error
+	Search(ctx context.Context, vector []float32) ([]Document, error)
+	GetAllHashes(ctx context.Context) (map[string]string, error)
+	SaveBatch(ctx context.Context, docs []Document) error
 }
 
 type NoteRepository interface {
@@ -12,8 +14,8 @@ type NoteRepository interface {
 }
 
 type Embedder interface {
-	EmbedQuery(text string) ([]float32, error)
-	EmbedDocuments(text []string) ([][]float32, error)
+	EmbedQuery(ctx context.Context, text string) ([]float32, error)
+	EmbedDocuments(ctx context.Context, text []string) ([][]float32, error)
 }
 
 type Document struct {
