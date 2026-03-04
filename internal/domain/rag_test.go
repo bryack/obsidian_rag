@@ -76,7 +76,9 @@ func TestRagEngine_Sync(t *testing.T) {
 		store := &SpyVectorStore{}
 		repo := &StubNoteRepository{Doc: Document{FilePath: "batch.md", Hash: "b1"}}
 		parser := &StubParser{Items: []Document{
-			{Content: "chunk 1"}, {Content: "chunk 2"}, {Content: "chunk 3"},
+			{FilePath: "batch.md", Content: "chunk 1"},
+			{FilePath: "batch.md", Content: "chunk 2"},
+			{FilePath: "batch.md", Content: "chunk 3"},
 		}}
 		embedder := &SpyEmbedder{vector: []float32{0.1}}
 

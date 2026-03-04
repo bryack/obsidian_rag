@@ -47,7 +47,6 @@ func (re *RagEngine) Sync() error {
 	for i, doc := range docs {
 		existingHash, ok := hashes[doc.FilePath]
 		if !ok || existingHash != doc.Hash {
-			fmt.Printf("Debug: File %s not found in DB hashes\n", doc.FilePath)
 			parcedChunks, err := re.parser.Parse(doc)
 			if err != nil {
 				return fmt.Errorf("failed to parse doc %q: %w", doc.FilePath, err)
@@ -62,14 +61,19 @@ func (re *RagEngine) Sync() error {
 			}
 			fmt.Printf("[%d/%d] Indexed: %s\n", i+1, len(docs), doc.FilePath)
 
+			var textToEmbed []string
 			for _, chunk := range parcedChunks {
-				vector, err := re.embedder.EmbedDocuments([]string{chunk.Content})
-				if err != nil {
-					return fmt.Errorf("failed to embed chunk content for file %q: %w", doc.FilePath, err)
-				}
-				chunk.Embedding = vector[0]
+				textToEmbed = append(textToEmbed, chunk.Content)
+			}
 
-				if err = re.store.Save(chunk); err != nil {
+			vectors, err := re.embedder.EmbedDocuments(textToEmbed)
+			if err != nil {
+				return fmt.Errorf("failed to embed chunk content for file %q: %w", doc.FilePath, err)
+			}
+
+			for j, vector := range vectors {
+				parcedChunks[j].Embedding = vector
+				if err = re.store.Save(parcedChunks[j]); err != nil {
 					return fmt.Errorf("failed to save document: %w", err)
 				}
 			}
