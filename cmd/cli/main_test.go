@@ -47,7 +47,7 @@ func TestRAGCLI(t *testing.T) {
 
 	tempDir := t.TempDir()
 	filePath := filepath.Join(tempDir, "test.md")
-	os.WriteFile(filePath, []byte("Обсидиан — это база знаний."), 0644)
+	os.WriteFile(filePath, []byte("Обсидиан — это база знаний, работающее с локальными Markdown-файлами. Оно позволяет структурировать информацию через гиперссылки."), 0644)
 
 	driver := cli.Driver{
 		PathToBinary: binaryPath,

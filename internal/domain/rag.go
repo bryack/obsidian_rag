@@ -3,6 +3,7 @@ package domain
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 )
 
@@ -54,7 +55,7 @@ func (re *RagEngine) Sync(ctx context.Context) error {
 		return fmt.Errorf("failed to get notes: %w", err)
 	}
 
-	fmt.Printf("Debug: Found %d existing hashes in DB\n", len(hashes))
+	fmt.Fprintf(os.Stderr, "Debug: Found %d existing hashes in DB\n", len(hashes))
 
 	var buffer []Document
 	for i, doc := range docs {
@@ -71,7 +72,7 @@ func (re *RagEngine) Sync(ctx context.Context) error {
 				buffer = buffer[:0]
 			}
 			if i%100 == 0 {
-				fmt.Printf("[%d/%d] Indexed: %s\n", i+1, len(docs), doc.FilePath)
+				fmt.Fprintf(os.Stderr, "[%d/%d] Indexed: %s\n", i+1, len(docs), doc.FilePath)
 			}
 		}
 	}
@@ -80,7 +81,7 @@ func (re *RagEngine) Sync(ctx context.Context) error {
 		return re.processBatch(ctx, buffer)
 	}
 
-	fmt.Printf("Indexed %d notes\n", len(docs))
+	fmt.Fprintf(os.Stderr, "Indexed %d notes\n", len(docs))
 	return nil
 }
 
@@ -122,7 +123,7 @@ func (re *RagEngine) processBatch(ctx context.Context, batch []Document) error {
 	if len(textToEmbed) > 0 {
 		vectors, err := re.embedder.EmbedDocuments(ctx, textToEmbed)
 		if err != nil {
-			fmt.Printf("DEBUG Error: failed to embed batch of %d texts. First text length: %d\n", len(textToEmbed), len(textToEmbed[0]))
+			fmt.Fprintf(os.Stderr, "DEBUG Error: failed to embed batch of %d texts. First text length: %d\n", len(textToEmbed), len(textToEmbed[0]))
 			return fmt.Errorf("failed to embed chunk content: %w", err)
 		}
 
