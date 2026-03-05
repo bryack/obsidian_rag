@@ -16,14 +16,16 @@ type MDParser struct {
 	goldmark        goldmark.Markdown
 	chunkSize       int
 	mergeChunkLimit int
+	minChunkSize    int
 }
 
-func NewMDParser(chunkSize int, mergeChunkLimit int) *MDParser {
+func NewMDParser(chunkSize int, mergeChunkLimit int, minChunkSize int) *MDParser {
 	goldmark := goldmark.New(goldmark.WithExtensions(&frontmatter.Extender{}))
 	return &MDParser{
 		goldmark:        goldmark,
 		chunkSize:       chunkSize,
 		mergeChunkLimit: mergeChunkLimit,
+		minChunkSize:    minChunkSize,
 	}
 }
 
@@ -64,9 +66,19 @@ func (p *MDParser) Parse(doc domain.Document) ([]domain.Document, error) {
 	}
 
 	mergeChunks := mergeChunks(textChunks, p.mergeChunkLimit)
+	var filteredChunks []string
+
+	for _, chunk := range mergeChunks {
+		if len(chunk) >= p.minChunkSize {
+			filteredChunks = append(filteredChunks, chunk)
+		}
+	}
+	if len(filteredChunks) == 0 {
+		filteredChunks = append(filteredChunks, "")
+	}
 
 	var docs []domain.Document
-	for _, t := range mergeChunks {
+	for _, t := range filteredChunks {
 		docs = append(docs, domain.Document{
 			FilePath: doc.FilePath,
 			Hash:     doc.Hash,

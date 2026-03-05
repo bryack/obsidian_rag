@@ -95,4 +95,27 @@ func TestRagEngine_Sync(t *testing.T) {
 		assert.Equal(t, 1, len(embedder.Calls), "Expected only 1 call to EmbedDocuments")
 		assert.Equal(t, 6, len(embedder.Calls[0]), "Expected 6 chunks total in the batch")
 	})
+
+	t.Run("skips empty content", func(t *testing.T) {
+		store := &SpyVectorStore{}
+		repo := &StubNoteRepository{Docs: []Document{
+			{FilePath: "real.md", Hash: "r1"},
+			{FilePath: "empty.md", Hash: "e2"},
+		}}
+		parser := &StubParser{Items: []Document{
+			{FilePath: "real.md", Content: "Hello World. And some text to be a good chunk to parse"},
+			{FilePath: "empty.md", Content: ""},
+		}}
+		embedder := &SpyEmbedder{vector: []float32{0.1}}
+
+		engine := NewRagEngine(repo, store, parser, embedder)
+		err := engine.Sync(context.Background())
+		assert.NoError(t, err)
+
+		assert.Equal(t, 1, len(embedder.Calls), "Expected only 1 call to Ollama")
+		assert.Equal(t, 2, len(embedder.Calls[0]), "Expected 2 chunks total in the batch")
+		assert.Equal(t, 4, len(store.Documents), "Expected all docs saves for hashes")
+		assert.Equal(t, 1, len(store.Documents[0].Embedding))
+		assert.Equal(t, 1024, len(store.Documents[1].Embedding))
+	})
 }

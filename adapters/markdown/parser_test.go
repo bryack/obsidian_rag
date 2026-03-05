@@ -12,20 +12,21 @@ import (
 var (
 	maxChunkSize    = 1000
 	mergeChunkLimit = 2000
+	minChunkSize    = 50
 )
 
 func TestParse(t *testing.T) {
 	t.Run("simple content", func(t *testing.T) {
 		testDoc := domain.Document{
-			Content: "Hello World",
+			Content: "Hello World. And some text to be a good chunk to parse",
 		}
 
-		parser := NewMDParser(maxChunkSize, mergeChunkLimit)
+		parser := NewMDParser(maxChunkSize, mergeChunkLimit, minChunkSize)
 		docs, err := parser.Parse(testDoc)
 		assert.NoError(t, err)
 
 		assert.Equal(t, 1, len(docs))
-		assert.Equal(t, "Hello World", docs[0].Content)
+		assert.Equal(t, "Hello World. And some text to be a good chunk to parse", docs[0].Content)
 	})
 
 	t.Run("with frontmatter", func(t *testing.T) {
@@ -35,18 +36,18 @@ tags:
   - rag
 project: [obsidian-rag]
 ---
-Real content here`
+Real content here. And some text to be a good chunk to parse`
 
 		testDoc := domain.Document{
 			Content: contentWithYAML,
 		}
-		parser := NewMDParser(maxChunkSize, mergeChunkLimit)
+		parser := NewMDParser(maxChunkSize, mergeChunkLimit, minChunkSize)
 		docs, err := parser.Parse(testDoc)
 		assert.NoError(t, err)
 
 		assert.Equal(t, []string{"obsidian", "rag"}, docs[0].Metadata.Tags)
 		assert.Equal(t, []string{"obsidian-rag"}, docs[0].Metadata.Project)
-		assert.Equal(t, "Real content here", docs[0].Content)
+		assert.Equal(t, "Real content here. And some text to be a good chunk to parse", docs[0].Content)
 	})
 
 	t.Run("splitting", func(t *testing.T) {
@@ -59,7 +60,7 @@ Real content here`
 			Content:  string(testData),
 		}
 
-		parser := NewMDParser(maxChunkSize, mergeChunkLimit)
+		parser := NewMDParser(maxChunkSize, mergeChunkLimit, minChunkSize)
 		chunks, err := parser.Parse(testDoc)
 		assert.NoError(t, err)
 
@@ -80,10 +81,26 @@ tags: [test]
 		testDoc := domain.Document{
 			Content: content,
 		}
-		parser := NewMDParser(maxChunkSize, mergeChunkLimit)
+		parser := NewMDParser(maxChunkSize, mergeChunkLimit, minChunkSize)
 
-		_, err := parser.Parse(testDoc)
+		docs, err := parser.Parse(testDoc)
 		assert.NoError(t, err)
+
+		assert.Equal(t, 1, len(docs))
+		assert.Equal(t, "", docs[0].Content)
+	})
+
+	t.Run("respect min chunk size", func(t *testing.T) {
+		testDoc := domain.Document{
+			Content: "Hello World",
+		}
+
+		parser := NewMDParser(maxChunkSize, mergeChunkLimit, minChunkSize)
+		docs, err := parser.Parse(testDoc)
+		assert.NoError(t, err)
+
+		assert.Equal(t, 1, len(docs))
+		assert.Equal(t, "", docs[0].Content)
 	})
 }
 
@@ -113,7 +130,7 @@ tags: [test]
 		Content: content,
 	}
 
-	parser := NewMDParser(500, mergeChunkLimit)
+	parser := NewMDParser(500, mergeChunkLimit, minChunkSize)
 	docs, err := parser.Parse(testDoc)
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(docs))

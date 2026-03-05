@@ -106,35 +106,32 @@ func (re *RagEngine) prepareChunks(doc Document) ([]Document, error) {
 }
 
 func (re *RagEngine) processBatch(ctx context.Context, batch []Document) error {
-	var filteredBatch []Document
 	var textToEmbed []string
-	for _, c := range batch {
+	var indicesToEmbed []int
+
+	for i, c := range batch {
 		content := strings.TrimSpace(c.Content)
 		if content == "" {
-			content = "empty"
+			batch[i].Embedding = make([]float32, 1024)
+		} else {
+			textToEmbed = append(textToEmbed, content)
+			indicesToEmbed = append(indicesToEmbed, i)
 		}
-		if len(content) < 150 {
-			continue
+	}
+
+	if len(textToEmbed) > 0 {
+		vectors, err := re.embedder.EmbedDocuments(ctx, textToEmbed)
+		if err != nil {
+			fmt.Printf("DEBUG Error: failed to embed batch of %d texts. First text length: %d\n", len(textToEmbed), len(textToEmbed[0]))
+			return fmt.Errorf("failed to embed chunk content: %w", err)
 		}
-		textToEmbed = append(textToEmbed, content)
-		filteredBatch = append(filteredBatch, c)
+
+		for j, vector := range vectors {
+			batch[indicesToEmbed[j]].Embedding = vector
+		}
 	}
 
-	if len(filteredBatch) == 0 {
-		return nil
-	}
-
-	vectors, err := re.embedder.EmbedDocuments(ctx, textToEmbed)
-	if err != nil {
-		fmt.Printf("DEBUG Error: failed to embed batch of %d texts. First text length: %d\n", len(textToEmbed), len(textToEmbed[0]))
-		return fmt.Errorf("failed to embed chunk content: %w", err)
-	}
-
-	for j := range filteredBatch {
-		filteredBatch[j].Embedding = vectors[j]
-	}
-
-	if err = re.store.SaveBatch(ctx, filteredBatch); err != nil {
+	if err := re.store.SaveBatch(ctx, batch); err != nil {
 		return fmt.Errorf("failed to save batch: %w", err)
 	}
 	return nil
