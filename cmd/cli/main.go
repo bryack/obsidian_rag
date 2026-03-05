@@ -11,6 +11,7 @@ import (
 	"github.com/bryack/obsidian_rag/adapters/markdown"
 	"github.com/bryack/obsidian_rag/adapters/ollama"
 	"github.com/bryack/obsidian_rag/adapters/qdrant"
+	"github.com/bryack/obsidian_rag/adapters/tokenizer"
 	"github.com/bryack/obsidian_rag/internal/domain"
 )
 
@@ -45,8 +46,9 @@ func main() {
 	repo := filerepo.NewRepository(os.DirFS(vaultPath))
 	parser := markdown.NewMDParser(chunkSize, mergeChunkLimit, minChunkSize)
 	embedder := ollama.NewOllamaEmbedder(embedModelName, *ollamaURL)
+	tokenizer := tokenizer.NewTokenizer()
 
-	engine := domain.NewRagEngine(repo, store, parser, embedder)
+	engine := domain.NewRagEngine(repo, store, parser, tokenizer, embedder)
 
 	switch command {
 	case "index":

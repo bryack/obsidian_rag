@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/bryack/obsidian_rag/internal/domain"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go/modules/qdrant"
@@ -126,5 +127,34 @@ func TestQdrant_Integration(t *testing.T) {
 		assert.Equal(t, 1, len(result), "Should find only 1 file for vector")
 		assert.Equal(t, "doc_with_content.md", result[0].FilePath)
 		assert.NotContains(t, "empty.md", result)
+	})
+
+	t.Run("Save and Search with Sparse Vector", func(t *testing.T) {
+		err := store.clear(ctx)
+		require.NoError(t, err)
+
+		sparseData := map[uint32]float32{123: 1.0, 456: 0.5}
+		doc := domain.Document{
+			FilePath:     "hybrid.md",
+			Content:      "Hybrid content to check Save and Search with Sparse Vector",
+			Embedding:    make([]float32, 1024),
+			SparseVector: sparseData,
+		}
+
+		err = store.Save(ctx, doc)
+		assert.NoError(t, err)
+
+		data := doc.FilePath + doc.Content
+		pointID := uuid.NewSHA1(obsidianNamespace, []byte(data))
+		wantedDoc, err := store.Get(ctx, pointID.String())
+		require.NoError(t, err)
+
+		assert.NotEmpty(t, wantedDoc.SparseVector, "SparseVector should not be empty")
+		assert.Equal(t, sparseData, wantedDoc.SparseVector, "Retrieved SparseVector should match original")
+
+		result, err := store.Search(ctx, doc.Embedding)
+		assert.NoError(t, err)
+		assert.NotEmpty(t, result)
+		assert.Equal(t, "hybrid.md", result[0].FilePath)
 	})
 }

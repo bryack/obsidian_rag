@@ -93,6 +93,13 @@ func (q *QdrantStore) ensureCollection(ctx context.Context) error {
 				Size:     VectorSize,
 				Distance: qdrant.Distance_Cosine,
 			}),
+			SparseVectorsConfig: qdrant.NewSparseVectorsConfig(map[string]*qdrant.SparseVectorParams{
+				"text": {
+					Index: &qdrant.SparseIndexConfig{
+						FullScanThreshold: qdrant.PtrOf(uint64(1000)),
+					},
+				},
+			}),
 		})
 		if err != nil {
 			return fmt.Errorf("failed to create collection: %w", err)
@@ -160,16 +167,30 @@ func (q *QdrantStore) toPoint(doc domain.Document) *qdrant.PointStruct {
 	data := doc.FilePath + doc.Content
 	pointID := uuid.NewSHA1(obsidianNamespace, []byte(data))
 
+	denseVector := qdrant.NewVector(doc.Embedding...)
+
+	var indices []uint32
+	var values []float32
+
+	for idx, val := range doc.SparseVector {
+		indices = append(indices, idx)
+		values = append(values, val)
+	}
+
+	sparseVector := qdrant.NewVectorSparse(indices, values)
+
 	return &qdrant.PointStruct{
-		Id:      qdrant.NewID(pointID.String()),
-		Vectors: qdrant.NewVectors(doc.Embedding...),
+		Id: qdrant.NewID(pointID.String()),
+		Vectors: qdrant.NewVectorsMap(map[string]*qdrant.Vector{
+			"":     denseVector,
+			"text": sparseVector,
+		}),
 		Payload: map[string]*qdrant.Value{
 			"file_path": qdrant.NewValueString(doc.FilePath),
 			"hash":      qdrant.NewValueString(doc.Hash),
 			"content":   qdrant.NewValueString(doc.Content),
 		},
 	}
-
 }
 
 func (q *QdrantStore) CountPoints(ctx context.Context) (uint64, error) {
@@ -188,4 +209,40 @@ func (q *QdrantStore) clear(ctx context.Context) error {
 		Points:         qdrant.NewPointsSelectorFilter(&qdrant.Filter{}),
 	})
 	return err
+}
+
+func (q *QdrantStore) Get(ctx context.Context, id string) (domain.Document, error) {
+	points, err := q.client.Get(ctx, &qdrant.GetPoints{
+		CollectionName: collectionName,
+		Ids:            []*qdrant.PointId{qdrant.NewID(id)},
+		WithPayload:    qdrant.NewWithPayload(true),
+		WithVectors:    qdrant.NewWithVectors(true),
+	})
+
+	if err != nil || len(points) == 0 {
+		return domain.Document{}, fmt.Errorf("failed to find points: %w", err)
+	}
+
+	p := points[0]
+	doc := domain.Document{
+		FilePath: p.Payload["file_path"].GetStringValue(),
+		Content:  p.Payload["content"].GetStringValue(),
+	}
+
+	if p.Vectors != nil {
+		if namedVectors := p.Vectors.GetVectors(); namedVectors != nil {
+			if vectorMap := namedVectors.GetVectors(); vectorMap != nil {
+				if textVector, ok := vectorMap["text"]; ok {
+					sparse := textVector.GetSparse()
+					if sparse != nil {
+						doc.SparseVector = make(map[uint32]float32)
+						for i, idx := range sparse.Indices {
+							doc.SparseVector[idx] = sparse.Values[i]
+						}
+					}
+				}
+			}
+		}
+	}
+	return doc, nil
 }
