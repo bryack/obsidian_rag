@@ -97,4 +97,31 @@ func TestQdrant_Integration(t *testing.T) {
 			assert.Equal(t, v.Content, result[0].Content)
 		}
 	})
+
+	t.Run("should not find any empty notes", func(t *testing.T) {
+		err := store.clear(ctx)
+		require.NoError(t, err)
+
+		testVector1 := make([]float32, 1024)
+		testVector1[1] = 0.9
+		testVector2 := make([]float32, 1024)
+		testVector2[1] = 0.9
+		docs := []domain.Document{
+			{FilePath: "doc_with_content.md", Hash: "hash-of-file1", Content: "В Obsidian RAG используется Ollama. Ollama — это популярный бесплатный инструмент с открытым исходным кодом", Embedding: testVector1},
+			{FilePath: "empty.md", Hash: "hash-of-file2", Content: "", Embedding: testVector2},
+		}
+
+		err = store.SaveBatch(ctx, docs)
+		assert.NoError(t, err)
+
+		searchVector := make([]float32, 1024)
+		searchVector[1] = 0.9
+		result, err := store.Search(ctx, searchVector)
+		assert.NoError(t, err)
+		assert.NotEmpty(t, result)
+
+		assert.Equal(t, 1, len(result), "Should find only 1 file for vector")
+		assert.Equal(t, "doc_with_content.md", result[0].FilePath)
+		assert.NotContains(t, "empty.md", result)
+	})
 }

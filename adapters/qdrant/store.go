@@ -133,6 +133,11 @@ func (q *QdrantStore) Search(ctx context.Context, vector []float32) ([]domain.Do
 		Query:          qdrant.NewQuery(vector...),
 		Limit:          qdrant.PtrOf(uint64(5)),
 		WithPayload:    qdrant.NewWithPayload(true),
+		Filter: &qdrant.Filter{
+			MustNot: []*qdrant.Condition{
+				qdrant.NewMatch("content", ""),
+			},
+		},
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed get result from query: %w", err)
@@ -173,4 +178,14 @@ func (q *QdrantStore) CountPoints(ctx context.Context) (uint64, error) {
 		return 0, err
 	}
 	return *info.PointsCount, err
+}
+
+func (q *QdrantStore) clear(ctx context.Context) error {
+	waitDelete := true
+	_, err := q.client.Delete(ctx, &qdrant.DeletePoints{
+		CollectionName: collectionName,
+		Wait:           &waitDelete,
+		Points:         qdrant.NewPointsSelectorFilter(&qdrant.Filter{}),
+	})
+	return err
 }
