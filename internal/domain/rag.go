@@ -106,13 +106,22 @@ func (re *RagEngine) prepareChunks(doc Document) ([]Document, error) {
 }
 
 func (re *RagEngine) processBatch(ctx context.Context, batch []Document) error {
+	var filteredBatch []Document
 	var textToEmbed []string
 	for _, c := range batch {
 		content := strings.TrimSpace(c.Content)
 		if content == "" {
 			content = "empty"
 		}
+		if len(content) < 150 {
+			continue
+		}
 		textToEmbed = append(textToEmbed, content)
+		filteredBatch = append(filteredBatch, c)
+	}
+
+	if len(filteredBatch) == 0 {
+		return nil
 	}
 
 	vectors, err := re.embedder.EmbedDocuments(ctx, textToEmbed)
@@ -121,12 +130,12 @@ func (re *RagEngine) processBatch(ctx context.Context, batch []Document) error {
 		return fmt.Errorf("failed to embed chunk content: %w", err)
 	}
 
-	for j := range batch {
-		batch[j].Embedding = vectors[j]
+	for j := range filteredBatch {
+		filteredBatch[j].Embedding = vectors[j]
 	}
 
-	if err = re.store.SaveBatch(ctx, batch); err != nil {
-		return fmt.Errorf("failed to save document: %w", err)
+	if err = re.store.SaveBatch(ctx, filteredBatch); err != nil {
+		return fmt.Errorf("failed to save batch: %w", err)
 	}
 	return nil
 }
