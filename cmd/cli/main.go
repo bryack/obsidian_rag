@@ -17,7 +17,7 @@ import (
 const (
 	chunkSize       = 1000
 	mergeChunkLimit = 2000
-	minChunkSize    = 150
+	minChunkSize    = 100
 	embedModelName  = "argus-ai/pplx-embed-v1-0.6b:fp32"
 )
 

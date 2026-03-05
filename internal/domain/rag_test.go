@@ -12,6 +12,7 @@ func TestRagEngine_Ask(t *testing.T) {
 
 	t.Run("real search", func(t *testing.T) {
 		ctx := context.Background()
+		tokenizer := &StubTokenizer{}
 		store := &SpyVectorStore{
 			Documents: []Document{
 				{Content: "В Obsidian RAG используется Go."},
@@ -21,7 +22,7 @@ func TestRagEngine_Ask(t *testing.T) {
 		parser := &StubParser{}
 		embedder := &SpyEmbedder{}
 
-		engine := NewRagEngine(repo, store, parser, embedder)
+		engine := NewRagEngine(repo, store, parser, tokenizer, embedder)
 		engine.Sync(ctx)
 
 		answer, err := engine.Ask(ctx, "На чем написан проект?")
@@ -34,6 +35,7 @@ func TestRagEngine_Ask(t *testing.T) {
 func TestRagEngine_Sync(t *testing.T) {
 	t.Run("happy path", func(t *testing.T) {
 		ctx := context.Background()
+		tokenizer := &StubTokenizer{}
 		store := &SpyVectorStore{}
 		repo := &StubNoteRepository{
 			Docs: []Document{{FilePath: "note.md", Hash: "v1", Content: "Hello!"}},
@@ -41,7 +43,7 @@ func TestRagEngine_Sync(t *testing.T) {
 		parser := &StubParser{Items: []Document{{FilePath: "note.md", Hash: "v1", Content: "Hello!"}}}
 		embedder := &SpyEmbedder{vector: []float32{0.1, 0.2}}
 
-		engine := NewRagEngine(repo, store, parser, embedder)
+		engine := NewRagEngine(repo, store, parser, tokenizer, embedder)
 
 		err := engine.Sync(ctx)
 		assert.NoError(t, err)
@@ -62,6 +64,7 @@ func TestRagEngine_Sync(t *testing.T) {
 		assert.Equal(t, "v2", store.Hashes["note.md"])
 	})
 	t.Run("empty file", func(t *testing.T) {
+		tokenizer := &StubTokenizer{}
 		store := &SpyVectorStore{}
 		repo := &StubNoteRepository{
 			Docs: []Document{{FilePath: "document.md", Hash: "d1", Content: ""}},
@@ -69,13 +72,14 @@ func TestRagEngine_Sync(t *testing.T) {
 		parser := &StubParser{}
 		embedder := &SpyEmbedder{vector: []float32{0.1, 0.2}}
 
-		engine := NewRagEngine(repo, store, parser, embedder)
+		engine := NewRagEngine(repo, store, parser, tokenizer, embedder)
 
 		err := engine.Sync(context.Background())
 		assert.NoError(t, err)
 		assert.Equal(t, 1, store.SaveCalled)
 	})
 	t.Run("batch processing", func(t *testing.T) {
+		tokenizer := &StubTokenizer{}
 		store := &SpyVectorStore{}
 		repo := &StubNoteRepository{Docs: []Document{
 			{FilePath: "batch1.md", Hash: "b1"},
@@ -88,7 +92,7 @@ func TestRagEngine_Sync(t *testing.T) {
 		}}
 		embedder := &SpyEmbedder{vector: []float32{0.1}}
 
-		engine := NewRagEngine(repo, store, parser, embedder)
+		engine := NewRagEngine(repo, store, parser, tokenizer, embedder)
 		err := engine.Sync(context.Background())
 		assert.NoError(t, err)
 
@@ -97,6 +101,7 @@ func TestRagEngine_Sync(t *testing.T) {
 	})
 
 	t.Run("skips empty content", func(t *testing.T) {
+		tokenizer := &StubTokenizer{}
 		store := &SpyVectorStore{}
 		repo := &StubNoteRepository{Docs: []Document{
 			{FilePath: "real.md", Hash: "r1"},
@@ -108,7 +113,7 @@ func TestRagEngine_Sync(t *testing.T) {
 		}}
 		embedder := &SpyEmbedder{vector: []float32{0.1}}
 
-		engine := NewRagEngine(repo, store, parser, embedder)
+		engine := NewRagEngine(repo, store, parser, tokenizer, embedder)
 		err := engine.Sync(context.Background())
 		assert.NoError(t, err)
 

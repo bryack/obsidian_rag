@@ -123,6 +123,7 @@ func (re *RagEngine) processBatch(ctx context.Context, batch []Document) error {
 		if content == "" {
 			batch[i].Embedding = make([]float32, 1024)
 		} else {
+			batch[i].SparseVector = re.tokenizer.ToSparseVector(content)
 			textToEmbed = append(textToEmbed, content)
 			indicesToEmbed = append(indicesToEmbed, i)
 		}

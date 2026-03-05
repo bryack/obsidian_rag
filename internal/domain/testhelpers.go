@@ -68,3 +68,9 @@ func (e *SpyEmbedder) EmbedDocuments(ctx context.Context, texts []string) ([][]f
 	}
 	return res, nil
 }
+
+type StubTokenizer struct{}
+
+func (st *StubTokenizer) ToSparseVector(text string) map[uint32]float32 {
+	return map[uint32]float32{1: 1.0}
+}
