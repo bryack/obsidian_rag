@@ -12,11 +12,19 @@ type RagEngine struct {
 	store     VectorStore
 	parser    Parser
 	embedder  Embedder
+	tokenizer Tokenizer
 	batchSize int
 }
 
-func NewRagEngine(repo NoteRepository, store VectorStore, parser Parser, embedder Embedder) *RagEngine {
-	return &RagEngine{store: store, repo: repo, parser: parser, embedder: embedder, batchSize: 8}
+func NewRagEngine(repo NoteRepository, store VectorStore, parser Parser, tokenizer Tokenizer, embedder Embedder) *RagEngine {
+	return &RagEngine{
+		store:     store,
+		repo:      repo,
+		parser:    parser,
+		embedder:  embedder,
+		tokenizer: tokenizer,
+		batchSize: 8,
+	}
 }
 
 func (re *RagEngine) Ask(ctx context.Context, question string) (string, error) {

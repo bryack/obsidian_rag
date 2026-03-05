@@ -73,6 +73,9 @@ func TestQdrant_Integration(t *testing.T) {
 	})
 
 	t.Run("save batch", func(t *testing.T) {
+		err := store.clear(ctx)
+		require.NoError(t, err)
+
 		testVector1 := make([]float32, 1024)
 		testVector1[1] = 1.0
 		testVector2 := make([]float32, 1024)
@@ -85,7 +88,7 @@ func TestQdrant_Integration(t *testing.T) {
 			{FilePath: "note3.md", Hash: "hash-of-file3", Content: "В Obsidian RAG используется Goldmark.", Embedding: testVector3},
 		}
 
-		err := store.SaveBatch(ctx, docs)
+		err = store.SaveBatch(ctx, docs)
 		assert.NoError(t, err)
 
 		for _, v := range docs {

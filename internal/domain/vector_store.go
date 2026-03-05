@@ -18,13 +18,18 @@ type Embedder interface {
 	EmbedDocuments(ctx context.Context, text []string) ([][]float32, error)
 }
 
+type Tokenizer interface {
+	ToSparseVector(text string) map[uint32]float32
+}
+
 type Document struct {
-	FilePath  string
-	Hash      string
-	Content   string
-	Metadata  Metadata
-	Embedding []float32
-	Score     float32
+	FilePath     string
+	Hash         string
+	Content      string
+	Metadata     Metadata
+	Embedding    []float32
+	SparseVector map[uint32]float32
+	Score        float32
 }
 
 type Metadata struct {
