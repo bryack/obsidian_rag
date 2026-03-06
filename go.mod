@@ -9,6 +9,7 @@ require (
 	github.com/testcontainers/testcontainers-go/modules/qdrant v0.40.0
 	github.com/yuin/goldmark v1.7.16
 	go.abhg.dev/goldmark/frontmatter v0.3.0
+	go.abhg.dev/goldmark/wikilink v0.6.0
 )
 
 require (

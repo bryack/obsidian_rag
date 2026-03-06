@@ -185,3 +185,16 @@ tags: [test]
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(docs))
 }
+
+func TestMDParser_Wikilinks(t *testing.T) {
+	content := `Check this [[My Note]] and this [[Other Note|Alias]] and also [[Note With Fragment#Section]].`
+	testDoc := domain.Document{Content: content}
+
+	parser := NewMDParser(500, 1000, 5)
+	docs, err := parser.Parse(testDoc)
+
+	assert.NoError(t, err)
+	assert.Contains(t, docs[0].Metadata.Links, "My Note")
+	assert.Contains(t, docs[0].Metadata.Links, "Other Note")
+	assert.Contains(t, docs[0].Metadata.Links, "Note With Fragment")
+}

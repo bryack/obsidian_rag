@@ -10,6 +10,7 @@ import (
 	"github.com/yuin/goldmark/parser"
 	"github.com/yuin/goldmark/text"
 	"go.abhg.dev/goldmark/frontmatter"
+	"go.abhg.dev/goldmark/wikilink"
 )
 
 type MDParser struct {
@@ -20,7 +21,7 @@ type MDParser struct {
 }
 
 func NewMDParser(chunkSize int, mergeChunkLimit int, minChunkSize int) *MDParser {
-	goldmark := goldmark.New(goldmark.WithExtensions(&frontmatter.Extender{}))
+	goldmark := goldmark.New(goldmark.WithExtensions(&frontmatter.Extender{}, &wikilink.Extender{}))
 	return &MDParser{
 		goldmark:        goldmark,
 		chunkSize:       chunkSize,
@@ -32,6 +33,7 @@ func NewMDParser(chunkSize int, mergeChunkLimit int, minChunkSize int) *MDParser
 type chunk struct {
 	Content    string
 	HeaderPath []string
+	Links      []string
 }
 
 func (p *MDParser) Parse(doc domain.Document) ([]domain.Document, error) {
@@ -56,13 +58,15 @@ func (p *MDParser) Parse(doc domain.Document) ([]domain.Document, error) {
 
 	for _, c := range filtered {
 		content := p.buildEmbeddingText(doc.FilePath, c.HeaderPath, c.Content)
+		chunkMeta := meta
+		chunkMeta.Links = uniqueStrings(append(chunkMeta.Links, c.Links...))
 
 		docs = append(docs, domain.Document{
 			FilePath:   doc.FilePath,
 			Hash:       doc.Hash,
 			Content:    content,
 			HeaderPath: c.HeaderPath,
-			Metadata:   meta,
+			Metadata:   chunkMeta,
 		})
 	}
 	if len(docs) == 0 {
@@ -82,52 +86,53 @@ func (p *MDParser) extractSections(root ast.Node, source []byte) []chunk {
 	var chunks []chunk
 	var buf strings.Builder
 	var headerPath []string
+	var currentLinks []string
 
 	flush := func() {
 		text := strings.TrimSpace(buf.String())
 		if text == "" {
 			buf.Reset()
+			currentLinks = nil
 			return
 		}
 
 		chunks = append(chunks, chunk{
 			Content:    text,
 			HeaderPath: append([]string{}, headerPath...),
+			Links:      uniqueStrings(currentLinks),
 		})
 
 		buf.Reset()
+		currentLinks = nil
 	}
 
 	for node := root.FirstChild(); node != nil; node = node.NextSibling() {
-
 		switch n := node.(type) {
 
 		case *ast.Heading:
-
 			if buf.Len() > 0 {
 				flush()
 			}
 
-			title := p.extractNodeText(n, source)
-
+			title, links := p.extractNodeText(n, source)
+			currentLinks = append(currentLinks, links...)
 			headerPath = updateHeaderPath(headerPath, n.Level, title)
 
 			buf.WriteString(title)
 			buf.WriteString("\n\n")
 
 		default:
-
-			text := p.extractNodeText(n, source)
+			text, links := p.extractNodeText(n, source)
 
 			if text != "" {
 				buf.WriteString(text)
 				buf.WriteString("\n\n")
+				currentLinks = append(currentLinks, links...)
 			}
 		}
 	}
 
 	flush()
-
 	return chunks
 }
 
@@ -151,7 +156,7 @@ func mergeChunks(raw []chunk, limit int) []chunk {
 		if buffer.Len() > 0 {
 			buffer.WriteString("\n\n")
 		}
-
+		current.Links = append(current.Links, c.Links...)
 		buffer.WriteString(c.Content)
 	}
 
@@ -163,19 +168,32 @@ func mergeChunks(raw []chunk, limit int) []chunk {
 	return merged
 }
 
-func (p *MDParser) extractNodeText(node ast.Node, source []byte) string {
+func (p *MDParser) extractNodeText(node ast.Node, source []byte) (string, []string) {
 	var builder strings.Builder
+	linksMap := make(map[string]struct{})
 
 	ast.Walk(node, func(n ast.Node, entering bool) (ast.WalkStatus, error) {
 		if entering {
 			if t, ok := n.(*ast.Text); ok {
 				builder.Write(t.Value(source))
 			}
+
+			if wl, ok := n.(*wikilink.Node); ok {
+				linkName := string(wl.Target)
+				if linkName != "" {
+					linksMap[linkName] = struct{}{}
+				}
+			}
 		}
 		return ast.WalkContinue, nil
 	})
 
-	return builder.String()
+	var links []string
+	for l := range linksMap {
+		links = append(links, l)
+	}
+
+	return builder.String(), links
 }
 
 func updateHeaderPath(current []string, level int, title string) []string {
@@ -216,4 +234,19 @@ func (p *MDParser) buildEmbeddingText(file string, headers []string, content str
 
 	builder.WriteString(content)
 	return builder.String()
+}
+
+func uniqueStrings(input []string) []string {
+	if len(input) == 0 {
+		return nil
+	}
+	m := make(map[string]struct{})
+	var result []string
+	for _, s := range input {
+		if _, ok := m[s]; !ok {
+			m[s] = struct{}{}
+			result = append(result, s)
+		}
+	}
+	return result
 }
