@@ -134,12 +134,31 @@ func (q *QdrantStore) SaveBatch(ctx context.Context, docs []domain.Document) err
 	return err
 }
 
-func (q *QdrantStore) Search(ctx context.Context, vector []float32) ([]domain.Document, error) {
+func (q *QdrantStore) Search(ctx context.Context, vector []float32, sparse map[uint32]float32) ([]domain.Document, error) {
+	var indices []uint32
+	var values []float32
+
+	for idx, val := range sparse {
+		indices = append(indices, idx)
+		values = append(values, val)
+	}
+
 	result, err := q.client.Query(ctx, &qdrant.QueryPoints{
 		CollectionName: collectionName,
-		Query:          qdrant.NewQuery(vector...),
-		Limit:          qdrant.PtrOf(uint64(5)),
-		WithPayload:    qdrant.NewWithPayload(true),
+		Prefetch: []*qdrant.PrefetchQuery{
+			{
+				Query: qdrant.NewQuery(vector...),
+				Limit: qdrant.PtrOf(uint64(20)),
+			},
+			{
+				Query: qdrant.NewQuerySparse(indices, values),
+				Using: qdrant.PtrOf("text"),
+				Limit: qdrant.PtrOf(uint64(20)),
+			},
+		},
+		Query:       qdrant.NewQueryFusion(qdrant.Fusion_RRF),
+		Limit:       qdrant.PtrOf(uint64(5)),
+		WithPayload: qdrant.NewWithPayload(true),
 		Filter: &qdrant.Filter{
 			MustNot: []*qdrant.Condition{
 				qdrant.NewMatch("content", ""),

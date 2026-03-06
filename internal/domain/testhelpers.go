@@ -18,7 +18,7 @@ func (s *SpyVectorStore) Save(ctx context.Context, doc Document) error {
 	return nil
 }
 
-func (s *SpyVectorStore) Search(ctx context.Context, vector []float32) ([]Document, error) {
+func (s *SpyVectorStore) Search(ctx context.Context, vector []float32, sparse map[uint32]float32) ([]Document, error) {
 	return s.Documents, nil
 }
 

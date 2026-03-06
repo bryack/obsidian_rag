@@ -56,8 +56,8 @@ func (p *MDParser) Parse(doc domain.Document) ([]domain.Document, error) {
 
 	splitter := textsplitter.NewRecursiveCharacter(
 		textsplitter.WithChunkSize(p.chunkSize),
-		textsplitter.WithChunkOverlap(300),
-		// textsplitter.WithSeparators([]string{"\n\n", "\n", " ", ""}),
+		textsplitter.WithChunkOverlap(150),
+		textsplitter.WithSeparators([]string{"\n\n", "\n", " ", ""}),
 	)
 
 	textChunks, err := splitter.SplitText(cleanContent)

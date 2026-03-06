@@ -32,7 +32,10 @@ func (re *RagEngine) Ask(ctx context.Context, question string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed to get vector for question %q: %w", question, err)
 	}
-	chunks, err := re.store.Search(ctx, vector)
+
+	sparse := re.tokenizer.ToSparseVector(question)
+
+	chunks, err := re.store.Search(ctx, vector, sparse)
 	if err != nil {
 		return "", fmt.Errorf("failed to search info for question: %q: %w", question, err)
 	}

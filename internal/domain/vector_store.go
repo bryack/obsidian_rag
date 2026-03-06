@@ -4,7 +4,7 @@ import "context"
 
 type VectorStore interface {
 	Save(ctx context.Context, doc Document) error
-	Search(ctx context.Context, vector []float32) ([]Document, error)
+	Search(ctx context.Context, vector []float32, sparse map[uint32]float32) ([]Document, error)
 	GetAllHashes(ctx context.Context) (map[string]string, error)
 	SaveBatch(ctx context.Context, docs []Document) error
 }

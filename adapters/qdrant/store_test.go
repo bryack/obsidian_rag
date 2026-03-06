@@ -43,11 +43,14 @@ func TestQdrant_Integration(t *testing.T) {
 		Embedding: testVector,
 	}
 
+	tokenizer := domain.StubTokenizer{}
+	sparseVector := tokenizer.ToSparseVector("question")
+
 	err = store.Save(ctx, doc)
 	require.NoError(t, err)
 
 	t.Run("Search returns Document", func(t *testing.T) {
-		result, err := store.Search(ctx, testVector)
+		result, err := store.Search(ctx, testVector, sparseVector)
 		require.NoError(t, err)
 
 		require.NotEmpty(t, result)
@@ -93,7 +96,7 @@ func TestQdrant_Integration(t *testing.T) {
 		assert.NoError(t, err)
 
 		for _, v := range docs {
-			result, err := store.Search(ctx, v.Embedding)
+			result, err := store.Search(ctx, v.Embedding, sparseVector)
 			assert.NoError(t, err)
 			assert.NotEmpty(t, result)
 
@@ -120,7 +123,7 @@ func TestQdrant_Integration(t *testing.T) {
 
 		searchVector := make([]float32, 1024)
 		searchVector[1] = 0.9
-		result, err := store.Search(ctx, searchVector)
+		result, err := store.Search(ctx, searchVector, sparseVector)
 		assert.NoError(t, err)
 		assert.NotEmpty(t, result)
 
@@ -152,7 +155,7 @@ func TestQdrant_Integration(t *testing.T) {
 		assert.NotEmpty(t, wantedDoc.SparseVector, "SparseVector should not be empty")
 		assert.Equal(t, sparseData, wantedDoc.SparseVector, "Retrieved SparseVector should match original")
 
-		result, err := store.Search(ctx, doc.Embedding)
+		result, err := store.Search(ctx, doc.Embedding, sparseVector)
 		assert.NoError(t, err)
 		assert.NotEmpty(t, result)
 		assert.Equal(t, "hybrid.md", result[0].FilePath)
