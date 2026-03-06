@@ -37,10 +37,10 @@ func TestQdrant_Integration(t *testing.T) {
 	testVector[0] = 1.0
 
 	doc := domain.Document{
-		FilePath:  "note.md",
-		Hash:      "hash-of-file",
-		Content:   "В Obsidian RAG используется Go.",
-		Embedding: testVector,
+		FilePath: "note.md",
+		Hash:     "hash-of-file",
+		Content:  "В Obsidian RAG используется Go.",
+		Vector:   domain.VectorData{Dense: testVector},
 	}
 
 	tokenizer := domain.StubTokenizer{}
@@ -87,16 +87,16 @@ func TestQdrant_Integration(t *testing.T) {
 		testVector3 := make([]float32, 1024)
 		testVector3[3] = 1.0
 		docs := []domain.Document{
-			{FilePath: "note1.md", Hash: "hash-of-file1", Content: "В Obsidian RAG используется Ollama.", Embedding: testVector1},
-			{FilePath: "note2.md", Hash: "hash-of-file2", Content: "В Obsidian RAG используется Qdrant.", Embedding: testVector2},
-			{FilePath: "note3.md", Hash: "hash-of-file3", Content: "В Obsidian RAG используется Goldmark.", Embedding: testVector3},
+			{FilePath: "note1.md", Hash: "hash-of-file1", Content: "В Obsidian RAG используется Ollama.", Vector: domain.VectorData{Dense: testVector1}},
+			{FilePath: "note2.md", Hash: "hash-of-file2", Content: "В Obsidian RAG используется Qdrant.", Vector: domain.VectorData{Dense: testVector2}},
+			{FilePath: "note3.md", Hash: "hash-of-file3", Content: "В Obsidian RAG используется Goldmark.", Vector: domain.VectorData{Dense: testVector3}},
 		}
 
 		err = store.SaveBatch(ctx, docs)
 		assert.NoError(t, err)
 
 		for _, v := range docs {
-			result, err := store.Search(ctx, v.Embedding, sparseVector)
+			result, err := store.Search(ctx, v.Vector.Dense, sparseVector)
 			assert.NoError(t, err)
 			assert.NotEmpty(t, result)
 
@@ -114,8 +114,8 @@ func TestQdrant_Integration(t *testing.T) {
 		testVector2 := make([]float32, 1024)
 		testVector2[1] = 0.9
 		docs := []domain.Document{
-			{FilePath: "doc_with_content.md", Hash: "hash-of-file1", Content: "В Obsidian RAG используется Ollama. Ollama — это популярный бесплатный инструмент с открытым исходным кодом", Embedding: testVector1},
-			{FilePath: "empty.md", Hash: "hash-of-file2", Content: "", Embedding: testVector2},
+			{FilePath: "doc_with_content.md", Hash: "hash-of-file1", Content: "В Obsidian RAG используется Ollama. Ollama — это популярный бесплатный инструмент с открытым исходным кодом", Vector: domain.VectorData{Dense: testVector1}},
+			{FilePath: "empty.md", Hash: "hash-of-file2", Content: "", Vector: domain.VectorData{Dense: testVector2}},
 		}
 
 		err = store.SaveBatch(ctx, docs)
@@ -138,10 +138,12 @@ func TestQdrant_Integration(t *testing.T) {
 
 		sparseData := map[uint32]float32{123: 1.0, 456: 0.5}
 		doc := domain.Document{
-			FilePath:     "hybrid.md",
-			Content:      "Hybrid content to check Save and Search with Sparse Vector",
-			Embedding:    make([]float32, 1024),
-			SparseVector: sparseData,
+			FilePath: "hybrid.md",
+			Content:  "Hybrid content to check Save and Search with Sparse Vector",
+			Vector: domain.VectorData{
+				Dense:        make([]float32, 1024),
+				SparseVector: sparseData,
+			},
 		}
 
 		err = store.Save(ctx, doc)
@@ -152,10 +154,10 @@ func TestQdrant_Integration(t *testing.T) {
 		wantedDoc, err := store.Get(ctx, pointID.String())
 		require.NoError(t, err)
 
-		assert.NotEmpty(t, wantedDoc.SparseVector, "SparseVector should not be empty")
-		assert.Equal(t, sparseData, wantedDoc.SparseVector, "Retrieved SparseVector should match original")
+		assert.NotEmpty(t, wantedDoc.Vector.SparseVector, "SparseVector should not be empty")
+		assert.Equal(t, sparseData, wantedDoc.Vector.SparseVector, "Retrieved SparseVector should match original")
 
-		result, err := store.Search(ctx, doc.Embedding, sparseVector)
+		result, err := store.Search(ctx, doc.Vector.Dense, sparseVector)
 		assert.NoError(t, err)
 		assert.NotEmpty(t, result)
 		assert.Equal(t, "hybrid.md", result[0].FilePath)

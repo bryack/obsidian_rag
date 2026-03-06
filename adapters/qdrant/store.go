@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"slices"
 	"strconv"
 
 	"github.com/bryack/obsidian_rag/internal/domain"
@@ -138,9 +139,14 @@ func (q *QdrantStore) Search(ctx context.Context, vector []float32, sparse map[u
 	var indices []uint32
 	var values []float32
 
-	for idx, val := range sparse {
+	for idx := range sparse {
 		indices = append(indices, idx)
-		values = append(values, val)
+	}
+
+	slices.Sort(indices)
+
+	for _, idx := range indices {
+		values = append(values, sparse[idx])
 	}
 
 	result, err := q.client.Query(ctx, &qdrant.QueryPoints{
@@ -186,14 +192,19 @@ func (q *QdrantStore) toPoint(doc domain.Document) *qdrant.PointStruct {
 	data := doc.FilePath + doc.Content
 	pointID := uuid.NewSHA1(obsidianNamespace, []byte(data))
 
-	denseVector := qdrant.NewVector(doc.Embedding...)
+	denseVector := qdrant.NewVector(doc.Vector.Dense...)
 
 	var indices []uint32
 	var values []float32
 
-	for idx, val := range doc.SparseVector {
+	for idx := range doc.Vector.SparseVector {
 		indices = append(indices, idx)
-		values = append(values, val)
+	}
+
+	slices.Sort(indices)
+
+	for _, idx := range indices {
+		values = append(values, doc.Vector.SparseVector[idx])
 	}
 
 	sparseVector := qdrant.NewVectorSparse(indices, values)
@@ -254,9 +265,9 @@ func (q *QdrantStore) Get(ctx context.Context, id string) (domain.Document, erro
 				if textVector, ok := vectorMap["text"]; ok {
 					sparse := textVector.GetSparse()
 					if sparse != nil {
-						doc.SparseVector = make(map[uint32]float32)
+						doc.Vector.SparseVector = make(map[uint32]float32)
 						for i, idx := range sparse.Indices {
-							doc.SparseVector[idx] = sparse.Values[i]
+							doc.Vector.SparseVector[idx] = sparse.Values[i]
 						}
 					}
 				}

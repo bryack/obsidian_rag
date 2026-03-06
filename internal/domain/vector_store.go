@@ -23,16 +23,25 @@ type Tokenizer interface {
 }
 
 type Document struct {
-	FilePath     string
-	Hash         string
-	Content      string
-	Metadata     Metadata
-	Embedding    []float32
+	FilePath string
+	Hash     string
+
+	Content    string
+	HeaderPath []string
+
+	Metadata Metadata
+
+	Vector VectorData
+	Score  float32
+}
+
+type VectorData struct {
+	Dense        []float32
 	SparseVector map[uint32]float32
-	Score        float32
 }
 
 type Metadata struct {
 	Tags    []string `yaml:"tags"`
 	Project []string `yaml:"project"`
+	Links   []string `yaml:"links"`
 }

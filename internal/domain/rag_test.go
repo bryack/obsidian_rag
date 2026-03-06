@@ -50,7 +50,7 @@ func TestRagEngine_Sync(t *testing.T) {
 		assert.Equal(t, 1, store.SaveCalled)
 		assert.Equal(t, "v1", store.Hashes["note.md"])
 		require.Len(t, store.Documents, 1)
-		assert.Equal(t, []float32{0.1, 0.2}, store.Documents[0].Embedding, "Document should be embedded before saving")
+		assert.Equal(t, []float32{0.1, 0.2}, store.Documents[0].Vector.Dense, "Document should be embedded before saving")
 
 		err = engine.Sync(ctx)
 		assert.NoError(t, err)
@@ -120,7 +120,7 @@ func TestRagEngine_Sync(t *testing.T) {
 		assert.Equal(t, 1, len(embedder.Calls), "Expected only 1 call to Ollama")
 		assert.Equal(t, 2, len(embedder.Calls[0]), "Expected 2 chunks total in the batch")
 		assert.Equal(t, 4, len(store.Documents), "Expected all docs saves for hashes")
-		assert.Equal(t, 1, len(store.Documents[0].Embedding))
-		assert.Equal(t, 1024, len(store.Documents[1].Embedding))
+		assert.Equal(t, 1, len(store.Documents[0].Vector.Dense))
+		assert.Equal(t, 1024, len(store.Documents[1].Vector.Dense))
 	})
 }

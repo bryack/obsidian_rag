@@ -124,9 +124,9 @@ func (re *RagEngine) processBatch(ctx context.Context, batch []Document) error {
 	for i, c := range batch {
 		content := strings.TrimSpace(c.Content)
 		if content == "" {
-			batch[i].Embedding = make([]float32, 1024)
+			batch[i].Vector.Dense = make([]float32, 1024)
 		} else {
-			batch[i].SparseVector = re.tokenizer.ToSparseVector(content)
+			batch[i].Vector.SparseVector = re.tokenizer.ToSparseVector(content)
 			textToEmbed = append(textToEmbed, content)
 			indicesToEmbed = append(indicesToEmbed, i)
 		}
@@ -140,7 +140,7 @@ func (re *RagEngine) processBatch(ctx context.Context, batch []Document) error {
 		}
 
 		for j, vector := range vectors {
-			batch[indicesToEmbed[j]].Embedding = vector
+			batch[indicesToEmbed[j]].Vector.Dense = vector
 		}
 	}
 
