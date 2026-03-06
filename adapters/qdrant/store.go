@@ -15,6 +15,14 @@ import (
 const (
 	collectionName = "obsidian_notes"
 	VectorSize     = 1024
+
+	filepath   = "file_path"
+	hash       = "hash"
+	content    = "content"
+	headerPath = "header_path"
+	links      = "links"
+	tags       = "tags"
+	project    = "project"
 )
 
 var obsidianNamespace = uuid.MustParse("f3f2e850-b5d4-11ef-ac7e-96584d5248b2")
@@ -56,7 +64,7 @@ func (q *QdrantStore) GetAllHashes(ctx context.Context) (map[string]string, erro
 	for {
 		result, err := q.client.Scroll(ctx, &qdrant.ScrollPoints{
 			CollectionName: collectionName,
-			WithPayload:    qdrant.NewWithPayloadInclude("file_path", "hash"),
+			WithPayload:    qdrant.NewWithPayloadInclude(filepath, hash),
 			Limit:          qdrant.PtrOf(uint32(1000)),
 			Offset:         offset,
 		})
@@ -66,10 +74,10 @@ func (q *QdrantStore) GetAllHashes(ctx context.Context) (map[string]string, erro
 		}
 
 		for _, p := range result {
-			filepath, okPath := p.Payload["file_path"]
-			hash, okHash := p.Payload["hash"]
+			_, okPath := p.Payload[filepath]
+			_, okHash := p.Payload[hash]
 			if okPath && okHash {
-				hashes[filepath.GetStringValue()] = hash.GetStringValue()
+				hashes[getString(p.Payload, filepath)] = getString(p.Payload, hash)
 			}
 		}
 		if len(result) < 1000 {
@@ -136,6 +144,95 @@ func (q *QdrantStore) SaveBatch(ctx context.Context, docs []domain.Document) err
 }
 
 func (q *QdrantStore) Search(ctx context.Context, vector []float32, sparse map[uint32]float32) ([]domain.Document, error) {
+	result, err := q.client.Query(ctx, &qdrant.QueryPoints{
+		CollectionName: collectionName,
+		Prefetch: []*qdrant.PrefetchQuery{
+			{
+				Query: qdrant.NewQuery(vector...),
+				Limit: qdrant.PtrOf(uint64(50)),
+			},
+			{
+				Query: qdrant.NewQuerySparse(prepareSparse(sparse)),
+				Using: qdrant.PtrOf("text"),
+				Limit: qdrant.PtrOf(uint64(50)),
+			},
+		},
+		Query:       qdrant.NewQueryFusion(qdrant.Fusion_RRF),
+		Limit:       qdrant.PtrOf(uint64(10)),
+		WithPayload: qdrant.NewWithPayload(true),
+		Filter: &qdrant.Filter{
+			MustNot: []*qdrant.Condition{
+				qdrant.NewMatch(content, ""),
+			},
+		},
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed get result from query: %w", err)
+	}
+
+	var docs []domain.Document
+	for _, p := range result {
+		doc := q.payloadToDocument(p.Payload)
+		doc.Score = p.Score
+		doc.Vector.SparseVector = extractSparse(p.Vectors)
+		docs = append(docs, doc)
+	}
+
+	return docs, nil
+}
+
+func (q *QdrantStore) payloadToDocument(payload map[string]*qdrant.Value) domain.Document {
+	return domain.Document{
+		FilePath:   getString(payload, filepath),
+		Hash:       getString(payload, hash),
+		Content:    getString(payload, content),
+		HeaderPath: valueToStrings(payload[headerPath]),
+		Metadata: domain.Metadata{
+			Tags:    valueToStrings(payload[tags]),
+			Project: valueToStrings(payload[project]),
+			Links:   valueToStrings(payload[links]),
+		},
+	}
+}
+
+func getString(payload map[string]*qdrant.Value, key string) string {
+	if v, ok := payload[key]; ok && v != nil {
+		return v.GetStringValue()
+	}
+	return ""
+}
+
+func (q *QdrantStore) toPoint(doc domain.Document) *qdrant.PointStruct {
+	data := doc.FilePath + doc.Content
+	pointID := uuid.NewSHA1(obsidianNamespace, []byte(data))
+
+	denseVector := qdrant.NewVector(doc.Vector.Dense...)
+
+	sparseVector := qdrant.NewVectorSparse(prepareSparse(doc.Vector.SparseVector))
+
+	return &qdrant.PointStruct{
+		Id: qdrant.NewID(pointID.String()),
+		Vectors: qdrant.NewVectorsMap(map[string]*qdrant.Vector{
+			"":     denseVector,
+			"text": sparseVector,
+		}),
+		Payload: q.documentToPayload(doc),
+	}
+}
+
+func (q *QdrantStore) documentToPayload(doc domain.Document) map[string]*qdrant.Value {
+	return map[string]*qdrant.Value{
+		filepath:   qdrant.NewValueString(doc.FilePath),
+		hash:       qdrant.NewValueString(doc.Hash),
+		content:    qdrant.NewValueString(doc.Content),
+		headerPath: NewValueStringList(doc.HeaderPath),
+		links:      NewValueStringList(doc.Metadata.Links),
+		tags:       NewValueStringList(doc.Metadata.Tags),
+		project:    NewValueStringList(doc.Metadata.Project),
+	}
+}
+
+func prepareSparse(sparse map[uint32]float32) ([]uint32, []float32) {
 	var indices []uint32
 	var values []float32
 
@@ -148,89 +245,7 @@ func (q *QdrantStore) Search(ctx context.Context, vector []float32, sparse map[u
 	for _, idx := range indices {
 		values = append(values, sparse[idx])
 	}
-
-	result, err := q.client.Query(ctx, &qdrant.QueryPoints{
-		CollectionName: collectionName,
-		Prefetch: []*qdrant.PrefetchQuery{
-			{
-				Query: qdrant.NewQuery(vector...),
-				Limit: qdrant.PtrOf(uint64(20)),
-			},
-			{
-				Query: qdrant.NewQuerySparse(indices, values),
-				Using: qdrant.PtrOf("text"),
-				Limit: qdrant.PtrOf(uint64(20)),
-			},
-		},
-		Query:       qdrant.NewQueryFusion(qdrant.Fusion_RRF),
-		Limit:       qdrant.PtrOf(uint64(5)),
-		WithPayload: qdrant.NewWithPayload(true),
-		Filter: &qdrant.Filter{
-			MustNot: []*qdrant.Condition{
-				qdrant.NewMatch("content", ""),
-			},
-		},
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed get result from query: %w", err)
-	}
-
-	var docs []domain.Document
-	for _, p := range result {
-		docs = append(docs, domain.Document{
-			FilePath:   p.Payload["file_path"].GetStringValue(),
-			Hash:       p.Payload["hash"].GetStringValue(),
-			Content:    p.Payload["content"].GetStringValue(),
-			HeaderPath: valueToStrings(p.Payload["header_path"]),
-			Metadata: domain.Metadata{
-				Tags:    valueToStrings(p.Payload["tags"]),
-				Project: valueToStrings(p.Payload["project"]),
-				Links:   valueToStrings(p.Payload["links"]),
-			},
-			Score: p.Score,
-		})
-	}
-
-	return docs, nil
-}
-
-func (q *QdrantStore) toPoint(doc domain.Document) *qdrant.PointStruct {
-	data := doc.FilePath + doc.Content
-	pointID := uuid.NewSHA1(obsidianNamespace, []byte(data))
-
-	denseVector := qdrant.NewVector(doc.Vector.Dense...)
-
-	var indices []uint32
-	var values []float32
-
-	for idx := range doc.Vector.SparseVector {
-		indices = append(indices, idx)
-	}
-
-	slices.Sort(indices)
-
-	for _, idx := range indices {
-		values = append(values, doc.Vector.SparseVector[idx])
-	}
-
-	sparseVector := qdrant.NewVectorSparse(indices, values)
-
-	return &qdrant.PointStruct{
-		Id: qdrant.NewID(pointID.String()),
-		Vectors: qdrant.NewVectorsMap(map[string]*qdrant.Vector{
-			"":     denseVector,
-			"text": sparseVector,
-		}),
-		Payload: map[string]*qdrant.Value{
-			"file_path":   qdrant.NewValueString(doc.FilePath),
-			"hash":        qdrant.NewValueString(doc.Hash),
-			"content":     qdrant.NewValueString(doc.Content),
-			"header_path": NewValueStringList(doc.HeaderPath),
-			"links":       NewValueStringList(doc.Metadata.Links),
-			"tags":        NewValueStringList(doc.Metadata.Tags),
-			"project":     NewValueStringList(doc.Metadata.Project),
-		},
-	}
+	return indices, values
 }
 
 func (q *QdrantStore) CountPoints(ctx context.Context) (uint64, error) {
@@ -264,33 +279,38 @@ func (q *QdrantStore) Get(ctx context.Context, id string) (domain.Document, erro
 	}
 
 	p := points[0]
-	doc := domain.Document{
-		FilePath:   p.Payload["file_path"].GetStringValue(),
-		Content:    p.Payload["content"].GetStringValue(),
-		HeaderPath: valueToStrings(p.Payload["header_path"]),
-		Metadata: domain.Metadata{
-			Tags:    valueToStrings(p.Payload["tags"]),
-			Project: valueToStrings(p.Payload["project"]),
-			Links:   valueToStrings(p.Payload["links"]),
-		},
+	doc := q.payloadToDocument(p.Payload)
+
+	doc.Vector.SparseVector = extractSparse(p.Vectors)
+	return doc, nil
+}
+
+func extractSparse(vectors *qdrant.VectorsOutput) map[uint32]float32 {
+	if vectors == nil {
+		return nil
 	}
 
-	if p.Vectors != nil {
-		if namedVectors := p.Vectors.GetVectors(); namedVectors != nil {
-			if vectorMap := namedVectors.GetVectors(); vectorMap != nil {
-				if textVector, ok := vectorMap["text"]; ok {
-					sparse := textVector.GetSparse()
-					if sparse != nil {
-						doc.Vector.SparseVector = make(map[uint32]float32)
-						for i, idx := range sparse.Indices {
-							doc.Vector.SparseVector[idx] = sparse.Values[i]
-						}
-					}
-				}
-			}
-		}
+	named := vectors.GetVectors()
+	if named == nil {
+		return nil
 	}
-	return doc, nil
+
+	vectorMap := named.GetVectors()
+	textVector, ok := vectorMap["text"]
+	if !ok || textVector == nil {
+		return nil
+	}
+
+	sparse := textVector.GetSparse()
+	if sparse == nil {
+		return nil
+	}
+
+	res := make(map[uint32]float32)
+	for i, idx := range sparse.Indices {
+		res[idx] = sparse.Values[i]
+	}
+	return res
 }
 
 func NewValueStringList(strings []string) *qdrant.Value {
