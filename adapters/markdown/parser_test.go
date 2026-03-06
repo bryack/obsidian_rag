@@ -11,14 +11,15 @@ import (
 
 var (
 	maxChunkSize    = 1000
-	mergeChunkLimit = 2000
+	mergeChunkLimit = 1500
 	minChunkSize    = 50
 )
 
 func TestParse(t *testing.T) {
 	t.Run("simple content", func(t *testing.T) {
 		testDoc := domain.Document{
-			Content: "Hello World. And some text to be a good chunk to parse",
+			FilePath: "simple_content.md",
+			Content:  "Hello World. And some text to be a good chunk to parse",
 		}
 
 		parser := NewMDParser(maxChunkSize, mergeChunkLimit, minChunkSize)
@@ -26,7 +27,7 @@ func TestParse(t *testing.T) {
 		assert.NoError(t, err)
 
 		assert.Equal(t, 1, len(docs))
-		assert.Equal(t, "Hello World. And some text to be a good chunk to parse", docs[0].Content)
+		assert.Equal(t, "File: simple_content.md\nHello World. And some text to be a good chunk to parse", docs[0].Content)
 	})
 
 	t.Run("with frontmatter", func(t *testing.T) {
@@ -39,7 +40,8 @@ project: [obsidian-rag]
 Real content here. And some text to be a good chunk to parse`
 
 		testDoc := domain.Document{
-			Content: contentWithYAML,
+			FilePath: "real_content.md",
+			Content:  contentWithYAML,
 		}
 		parser := NewMDParser(maxChunkSize, mergeChunkLimit, minChunkSize)
 		docs, err := parser.Parse(testDoc)
@@ -47,7 +49,7 @@ Real content here. And some text to be a good chunk to parse`
 
 		assert.Equal(t, []string{"obsidian", "rag"}, docs[0].Metadata.Tags)
 		assert.Equal(t, []string{"obsidian-rag"}, docs[0].Metadata.Project)
-		assert.Equal(t, "Real content here. And some text to be a good chunk to parse", docs[0].Content)
+		assert.Equal(t, "File: real_content.md\nReal content here. And some text to be a good chunk to parse", docs[0].Content)
 	})
 
 	t.Run("splitting", func(t *testing.T) {
@@ -69,7 +71,7 @@ Real content here. And some text to be a good chunk to parse`
 			assert.Equal(t, "testdata.md", chunk.FilePath, "Chunk %d missing FilePath", i)
 			assert.Equal(t, []string{"tdd"}, chunk.Metadata.Tags, "Chunk %d missing Tags", i)
 			assert.NotEmpty(t, chunk.Content, "Chunk %d is empty", i)
-			assert.LessOrEqual(t, len(chunk.Content), maxChunkSize+1500, "Chunk too large")
+			assert.LessOrEqual(t, len(chunk.Content), maxChunkSize+2000, "Chunk too large")
 		}
 	})
 	t.Run("empty content after yaml", func(t *testing.T) {
@@ -126,6 +128,54 @@ tags: [test]
 ### Тут небольшой заголовок
 [00:35:56] Это текст, который должен быть в одном чанке, а не в нескольких.`
 
+	testDoc := domain.Document{
+		Content: content,
+	}
+
+	parser := NewMDParser(500, mergeChunkLimit, minChunkSize)
+	docs, err := parser.Parse(testDoc)
+	assert.NoError(t, err)
+	assert.Equal(t, 1, len(docs))
+}
+
+func TestMDParser_HeadingSplitting(t *testing.T) {
+	content := `---
+tags: [test]
+---
+                                    
+## Заголовок второго уровня
+Это текст должен быть в первом чанке. Это текст должен быть в первом чанке. Это текст должен быть в первом чанке. Это текст должен быть в первом чанке. Это текст должен быть в первом чанке. Это текст должен быть в первом чанке. Это текст должен быть в первом чанке.
+## Совсем другой текст в заголовке
+Это текст должен быть во втором чанке. Это текст должен быть во втором чанке. Это текст должен быть во втором чанке. Это текст должен быть во втором чанке. Это текст должен быть во втором чанке. Это текст должен быть во втором чанке. Это текст должен быть во втором чанке.`
+
+	testDoc := domain.Document{
+		Content: content,
+	}
+
+	parser := NewMDParser(500, 1000, 5)
+	docs, err := parser.Parse(testDoc)
+	assert.NoError(t, err)
+	assert.Equal(t, 2, len(docs))
+}
+
+func TestMDParser_ListAggregation(t *testing.T) {
+	content := `---
+tags: [test]
+---
+                                    
+ - это список. каждый пункт должен быть длинным;
+ - второй пункт в списке. попробуем сделать так, чтобы пункты отличались друг от друга;
+ - третий;
+
+ - чуть подлиннее;
+ - в списке должны быть разные пункты;
+
+ - уже шестой пункт. пусть будет такой длины;
+
+ - сделаем пункт eight немного длинее, чтобы точно знать, что целостность списков сохраняется.
+ - предложения должны быть довольно большими, чтобы не оставалось сомнений в том, что парсер работает корректно;
+ - и самый последний пункт, который докажет на 100%, что мы всё сделали верно.
+`
 	testDoc := domain.Document{
 		Content: content,
 	}

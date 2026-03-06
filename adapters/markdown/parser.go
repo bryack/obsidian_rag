@@ -5,8 +5,8 @@ import (
 	"strings"
 
 	"github.com/bryack/obsidian_rag/internal/domain"
-	"github.com/tmc/langchaingo/textsplitter"
 	"github.com/yuin/goldmark"
+	"github.com/yuin/goldmark/ast"
 	"github.com/yuin/goldmark/parser"
 	"github.com/yuin/goldmark/text"
 	"go.abhg.dev/goldmark/frontmatter"
@@ -29,10 +29,15 @@ func NewMDParser(chunkSize int, mergeChunkLimit int, minChunkSize int) *MDParser
 	}
 }
 
+type chunk struct {
+	Content    string
+	HeaderPath []string
+}
+
 func (p *MDParser) Parse(doc domain.Document) ([]domain.Document, error) {
 	source := []byte(doc.Content)
 	ctx := parser.NewContext()
-	reader := text.NewReader([]byte(doc.Content))
+	reader := text.NewReader(source)
 
 	docNode := p.goldmark.Parser().Parse(reader, parser.WithContext(ctx))
 
@@ -43,71 +48,172 @@ func (p *MDParser) Parse(doc domain.Document) ([]domain.Document, error) {
 		}
 	}
 
-	cleanContent := ""
-	if docNode.HasChildren() {
-		for child := docNode.FirstChild(); child != nil; child = child.NextSibling() {
-			if child.Lines().Len() > 0 {
-				start := child.Lines().At(0).Start
-				cleanContent = string(source[start:])
-				break
-			}
-		}
-	}
-
-	splitter := textsplitter.NewRecursiveCharacter(
-		textsplitter.WithChunkSize(p.chunkSize),
-		textsplitter.WithChunkOverlap(150),
-		textsplitter.WithSeparators([]string{"\n\n", "\n", " ", ""}),
-	)
-
-	textChunks, err := splitter.SplitText(cleanContent)
-	if err != nil {
-		return nil, fmt.Errorf("failed to split text: %w", err)
-	}
-
-	mergeChunks := mergeChunks(textChunks, p.mergeChunkLimit)
-	var filteredChunks []string
-
-	for _, chunk := range mergeChunks {
-		if len(chunk) >= p.minChunkSize {
-			filteredChunks = append(filteredChunks, chunk)
-		}
-	}
-	if len(filteredChunks) == 0 {
-		filteredChunks = append(filteredChunks, "")
-	}
+	rawChunks := p.extractSections(docNode, source)
+	merged := mergeChunks(rawChunks, p.mergeChunkLimit)
+	filtered := p.filterSmallChunks(merged)
 
 	var docs []domain.Document
-	for _, t := range filteredChunks {
+
+	for _, c := range filtered {
+		content := p.buildEmbeddingText(doc.FilePath, c.HeaderPath, c.Content)
+
 		docs = append(docs, domain.Document{
-			FilePath: doc.FilePath,
-			Hash:     doc.Hash,
-			Metadata: meta,
-			Content:  t,
+			FilePath:   doc.FilePath,
+			Hash:       doc.Hash,
+			Content:    content,
+			HeaderPath: c.HeaderPath,
+			Metadata:   meta,
+		})
+	}
+	if len(docs) == 0 {
+		docs = append(docs, domain.Document{
+			FilePath:   doc.FilePath,
+			Hash:       doc.Hash,
+			Content:    "",
+			HeaderPath: nil,
+			Metadata:   meta,
 		})
 	}
 
 	return docs, nil
 }
 
-func mergeChunks(raw []string, limit int) []string {
-	var merged []string
-	var current strings.Builder
+func (p *MDParser) extractSections(root ast.Node, source []byte) []chunk {
+	var chunks []chunk
+	var buf strings.Builder
+	var headerPath []string
 
-	for _, s := range raw {
-		if current.Len()+len(s)+2 > limit && current.Len() > 0 {
-			merged = append(merged, current.String())
-			current.Reset()
+	flush := func() {
+		text := strings.TrimSpace(buf.String())
+		if text == "" {
+			buf.Reset()
+			return
 		}
 
-		if current.Len() > 0 {
-			current.WriteString("\n\n")
-		}
-		current.WriteString(s)
+		chunks = append(chunks, chunk{
+			Content:    text,
+			HeaderPath: append([]string{}, headerPath...),
+		})
+
+		buf.Reset()
 	}
 
-	if current.Len() > 0 {
-		merged = append(merged, current.String())
+	for node := root.FirstChild(); node != nil; node = node.NextSibling() {
+
+		switch n := node.(type) {
+
+		case *ast.Heading:
+
+			if buf.Len() > 0 {
+				flush()
+			}
+
+			title := p.extractNodeText(n, source)
+
+			headerPath = updateHeaderPath(headerPath, n.Level, title)
+
+			buf.WriteString(title)
+			buf.WriteString("\n\n")
+
+		default:
+
+			text := p.extractNodeText(n, source)
+
+			if text != "" {
+				buf.WriteString(text)
+				buf.WriteString("\n\n")
+			}
+		}
 	}
+
+	flush()
+
+	return chunks
+}
+
+func mergeChunks(raw []chunk, limit int) []chunk {
+	var merged []chunk
+	var buffer strings.Builder
+	var current chunk
+
+	for _, c := range raw {
+		if buffer.Len()+len(c.Content)+2 > limit && buffer.Len() > 0 {
+			current.Content = buffer.String()
+			merged = append(merged, current)
+			buffer.Reset()
+			current = chunk{}
+		}
+
+		if buffer.Len() == 0 {
+			current.HeaderPath = append(current.HeaderPath, c.HeaderPath...)
+		}
+
+		if buffer.Len() > 0 {
+			buffer.WriteString("\n\n")
+		}
+
+		buffer.WriteString(c.Content)
+	}
+
+	if buffer.Len() > 0 {
+		current.Content = buffer.String()
+		merged = append(merged, current)
+	}
+
 	return merged
+}
+
+func (p *MDParser) extractNodeText(node ast.Node, source []byte) string {
+	var builder strings.Builder
+
+	ast.Walk(node, func(n ast.Node, entering bool) (ast.WalkStatus, error) {
+		if entering {
+			if t, ok := n.(*ast.Text); ok {
+				builder.Write(t.Value(source))
+			}
+		}
+		return ast.WalkContinue, nil
+	})
+
+	return builder.String()
+}
+
+func updateHeaderPath(current []string, level int, title string) []string {
+	if level <= len(current) {
+		current = current[:level-1]
+	}
+
+	for len(current) < level-1 {
+		current = append(current, "")
+	}
+	return append(current, title)
+}
+
+func (p *MDParser) filterSmallChunks(chunks []chunk) []chunk {
+	var result []chunk
+
+	for _, chunk := range chunks {
+		if len(chunk.Content) < p.minChunkSize {
+			continue
+		}
+		result = append(result, chunk)
+	}
+	return result
+}
+
+func (p *MDParser) buildEmbeddingText(file string, headers []string, content string) string {
+	var builder strings.Builder
+
+	builder.WriteString("File: ")
+	builder.WriteString(file)
+	builder.WriteString("\n")
+
+	if len(headers) > 0 {
+		builder.WriteString("Section: ")
+		builder.WriteString(strings.Join(headers, " / "))
+		builder.WriteString("\n\n")
+	}
+
+	builder.WriteString(content)
+	return builder.String()
 }
