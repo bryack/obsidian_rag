@@ -23,11 +23,11 @@ type Tokenizer interface {
 }
 
 type Document struct {
-	FilePath string
-	Hash     string
+	FilePath string `yaml:"file_path"`
+	Hash     string `yaml:"hash"`
 
-	Content    string
-	HeaderPath []string
+	Content    string   `yaml:"content"`
+	HeaderPath []string `yaml:"header_path"`
 
 	Metadata Metadata
 

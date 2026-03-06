@@ -21,9 +21,9 @@ type MDParser struct {
 }
 
 func NewMDParser(chunkSize int, mergeChunkLimit int, minChunkSize int) *MDParser {
-	goldmark := goldmark.New(goldmark.WithExtensions(&frontmatter.Extender{}, &wikilink.Extender{}))
+	gm := goldmark.New(goldmark.WithExtensions(&frontmatter.Extender{}, &wikilink.Extender{}))
 	return &MDParser{
-		goldmark:        goldmark,
+		goldmark:        gm,
 		chunkSize:       chunkSize,
 		mergeChunkLimit: mergeChunkLimit,
 		minChunkSize:    minChunkSize,
@@ -241,7 +241,7 @@ func uniqueStrings(input []string) []string {
 		return nil
 	}
 	m := make(map[string]struct{})
-	var result []string
+	result := make([]string, 0, len(input))
 	for _, s := range input {
 		if _, ok := m[s]; !ok {
 			m[s] = struct{}{}

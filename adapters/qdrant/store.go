@@ -178,10 +178,16 @@ func (q *QdrantStore) Search(ctx context.Context, vector []float32, sparse map[u
 	var docs []domain.Document
 	for _, p := range result {
 		docs = append(docs, domain.Document{
-			FilePath: p.Payload["file_path"].GetStringValue(),
-			Hash:     p.Payload["hash"].GetStringValue(),
-			Content:  p.Payload["content"].GetStringValue(),
-			Score:    p.Score,
+			FilePath:   p.Payload["file_path"].GetStringValue(),
+			Hash:       p.Payload["hash"].GetStringValue(),
+			Content:    p.Payload["content"].GetStringValue(),
+			HeaderPath: valueToStrings(p.Payload["header_path"]),
+			Metadata: domain.Metadata{
+				Tags:    valueToStrings(p.Payload["tags"]),
+				Project: valueToStrings(p.Payload["project"]),
+				Links:   valueToStrings(p.Payload["links"]),
+			},
+			Score: p.Score,
 		})
 	}
 
@@ -216,9 +222,13 @@ func (q *QdrantStore) toPoint(doc domain.Document) *qdrant.PointStruct {
 			"text": sparseVector,
 		}),
 		Payload: map[string]*qdrant.Value{
-			"file_path": qdrant.NewValueString(doc.FilePath),
-			"hash":      qdrant.NewValueString(doc.Hash),
-			"content":   qdrant.NewValueString(doc.Content),
+			"file_path":   qdrant.NewValueString(doc.FilePath),
+			"hash":        qdrant.NewValueString(doc.Hash),
+			"content":     qdrant.NewValueString(doc.Content),
+			"header_path": NewValueStringList(doc.HeaderPath),
+			"links":       NewValueStringList(doc.Metadata.Links),
+			"tags":        NewValueStringList(doc.Metadata.Tags),
+			"project":     NewValueStringList(doc.Metadata.Project),
 		},
 	}
 }
@@ -255,8 +265,14 @@ func (q *QdrantStore) Get(ctx context.Context, id string) (domain.Document, erro
 
 	p := points[0]
 	doc := domain.Document{
-		FilePath: p.Payload["file_path"].GetStringValue(),
-		Content:  p.Payload["content"].GetStringValue(),
+		FilePath:   p.Payload["file_path"].GetStringValue(),
+		Content:    p.Payload["content"].GetStringValue(),
+		HeaderPath: valueToStrings(p.Payload["header_path"]),
+		Metadata: domain.Metadata{
+			Tags:    valueToStrings(p.Payload["tags"]),
+			Project: valueToStrings(p.Payload["project"]),
+			Links:   valueToStrings(p.Payload["links"]),
+		},
 	}
 
 	if p.Vectors != nil {
@@ -275,4 +291,42 @@ func (q *QdrantStore) Get(ctx context.Context, id string) (domain.Document, erro
 		}
 	}
 	return doc, nil
+}
+
+func NewValueStringList(strings []string) *qdrant.Value {
+	values := make([]*qdrant.Value, len(strings))
+	for i, s := range strings {
+		values[i] = qdrant.NewValueString(s)
+	}
+
+	return &qdrant.Value{
+		Kind: &qdrant.Value_ListValue{
+			ListValue: &qdrant.ListValue{
+				Values: values,
+			},
+		},
+	}
+}
+
+func valueToStrings(value *qdrant.Value) []string {
+	if value == nil {
+		return []string{}
+	}
+
+	listValue := value.GetListValue()
+	if listValue == nil {
+		return []string{}
+	}
+
+	if len(listValue.Values) == 0 {
+		return []string{}
+	}
+
+	result := make([]string, 0, len(listValue.Values))
+	for _, v := range listValue.Values {
+		str := v.GetStringValue()
+		result = append(result, str)
+	}
+
+	return result
 }

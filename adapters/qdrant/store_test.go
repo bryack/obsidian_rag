@@ -41,6 +41,12 @@ func TestQdrant_Integration(t *testing.T) {
 		Hash:     "hash-of-file",
 		Content:  "В Obsidian RAG используется Go.",
 		Vector:   domain.VectorData{Dense: testVector},
+		HeaderPath: []string{"Technology", "Go"},
+		Metadata: domain.Metadata{
+			Tags:    []string{"programming", "obsidian"},
+			Project: []string{"obsidian-rag"},
+			Links:   []string{"Go-lang"},
+		},
 	}
 
 	tokenizer := domain.StubTokenizer{}
@@ -56,6 +62,10 @@ func TestQdrant_Integration(t *testing.T) {
 		require.NotEmpty(t, result)
 		assert.Equal(t, "note.md", result[0].FilePath)
 		assert.Equal(t, "В Obsidian RAG используется Go.", result[0].Content)
+		assert.Equal(t, []string{"Technology", "Go"}, result[0].HeaderPath)
+		assert.Equal(t, []string{"programming", "obsidian"}, result[0].Metadata.Tags)
+		assert.Equal(t, []string{"obsidian-rag"}, result[0].Metadata.Project)
+		assert.Equal(t, []string{"Go-lang"}, result[0].Metadata.Links)
 	})
 
 	t.Run("GetAllHashes returns saved hashes", func(t *testing.T) {
