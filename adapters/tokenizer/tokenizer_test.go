@@ -17,3 +17,14 @@ func TestTokenizer_ToSparseVector(t *testing.T) {
 		assert.True(t, weight > 0)
 	}
 }
+
+func TestTokenizer_StopWords(t *testing.T) {
+	tokenizer := NewTokenizer()
+
+	t.Run("ignores stop words", func(t *testing.T) {
+		text := "и, к, из, РЕДКО, the, and в Обсидиан"
+		vector := tokenizer.ToSparseVector(text)
+
+		assert.Equal(t, 1, len(vector))
+	})
+}

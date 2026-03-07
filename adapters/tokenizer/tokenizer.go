@@ -21,7 +21,13 @@ func (t *Tokenizer) ToSparseVector(text string) map[uint32]float32 {
 	})
 
 	for _, word := range words {
+		word := strings.Trim(word, ".,!?-()[]{}'\"")
 		if len(word) < 2 {
+			continue
+		}
+
+		lower := strings.ToLower(word)
+		if _, ok := stopWords[lower]; ok {
 			continue
 		}
 
