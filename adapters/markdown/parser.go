@@ -137,7 +137,7 @@ func (p *MDParser) extractSections(root ast.Node, source []byte) []chunk {
 }
 
 func mergeChunks(raw []chunk, limit int) []chunk {
-	var merged []chunk
+	merged := make([]chunk, 0, len(raw))
 	var buffer strings.Builder
 	var current chunk
 
@@ -149,8 +149,8 @@ func mergeChunks(raw []chunk, limit int) []chunk {
 			current = chunk{}
 		}
 
-		if buffer.Len() == 0 {
-			current.HeaderPath = append(current.HeaderPath, c.HeaderPath...)
+		if len(c.HeaderPath) > 0 {
+			current.HeaderPath = append([]string{}, c.HeaderPath...)
 		}
 
 		if buffer.Len() > 0 {
@@ -199,10 +199,6 @@ func (p *MDParser) extractNodeText(node ast.Node, source []byte) (string, []stri
 func updateHeaderPath(current []string, level int, title string) []string {
 	if level <= len(current) {
 		current = current[:level-1]
-	}
-
-	for len(current) < level-1 {
-		current = append(current, "")
 	}
 	return append(current, title)
 }
