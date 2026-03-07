@@ -44,7 +44,11 @@ func main() {
 		log.Fatal(err)
 	}
 	repo := filerepo.NewRepository(os.DirFS(vaultPath))
-	parser := markdown.NewMDParser(chunkSize, mergeChunkLimit, minChunkSize)
+	parser, err := markdown.NewMDParser(chunkSize, mergeChunkLimit, minChunkSize)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to launch parser")
+		os.Exit(1)
+	}
 	embedder := ollama.NewOllamaEmbedder(embedModelName, *ollamaURL)
 	tokenizer := tokenizer.NewTokenizer()
 	formatter := &domain.DefaultFormatter{}

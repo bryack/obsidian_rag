@@ -15,19 +15,24 @@ import (
 
 type MDParser struct {
 	goldmark        goldmark.Markdown
+	chunker         *Chunker
 	chunkSize       int
 	mergeChunkLimit int
 	minChunkSize    int
 }
 
-func NewMDParser(chunkSize int, mergeChunkLimit int, minChunkSize int) *MDParser {
-	gm := goldmark.New(goldmark.WithExtensions(&frontmatter.Extender{}, &wikilink.Extender{}))
-	return &MDParser{
-		goldmark:        gm,
-		chunkSize:       chunkSize,
-		mergeChunkLimit: mergeChunkLimit,
-		minChunkSize:    minChunkSize,
+func NewMDParser(chunkSize, mergeChunkLimit, minChunkSize int) (*MDParser, error) {
+	if chunkSize <= 0 || mergeChunkLimit <= 0 || minChunkSize <= 0 {
+		return nil, fmt.Errorf("require positive number")
 	}
+
+	gm := goldmark.New(goldmark.WithExtensions(&frontmatter.Extender{}, &wikilink.Extender{}))
+
+	return &MDParser{
+		goldmark:  gm,
+		chunker:   NewChunker(mergeChunkLimit, minChunkSize),
+		chunkSize: chunkSize,
+	}, nil
 }
 
 type chunk struct {
@@ -51,8 +56,8 @@ func (p *MDParser) Parse(doc domain.Document) ([]domain.Document, error) {
 	}
 
 	rawChunks := p.extractSections(docNode, source)
-	merged := mergeChunks(rawChunks, p.mergeChunkLimit)
-	filtered := p.filterSmallChunks(merged)
+	merged := p.chunker.Merge(rawChunks)
+	filtered := p.chunker.Filter(merged)
 
 	var docs []domain.Document
 
@@ -135,38 +140,6 @@ func (p *MDParser) extractSections(root ast.Node, source []byte) []chunk {
 	return chunks
 }
 
-func mergeChunks(raw []chunk, limit int) []chunk {
-	merged := make([]chunk, 0, len(raw))
-	var buffer strings.Builder
-	var current chunk
-
-	for _, c := range raw {
-		if buffer.Len()+len(c.Content)+2 > limit && buffer.Len() > 0 {
-			current.Content = buffer.String()
-			merged = append(merged, current)
-			buffer.Reset()
-			current = chunk{}
-		}
-
-		if len(c.HeaderPath) > 0 {
-			current.HeaderPath = append([]string{}, c.HeaderPath...)
-		}
-
-		if buffer.Len() > 0 {
-			buffer.WriteString("\n\n")
-		}
-		current.Links = append(current.Links, c.Links...)
-		buffer.WriteString(c.Content)
-	}
-
-	if buffer.Len() > 0 {
-		current.Content = buffer.String()
-		merged = append(merged, current)
-	}
-
-	return merged
-}
-
 func (p *MDParser) extractNodeText(node ast.Node, source []byte) (string, []string) {
 	var builder strings.Builder
 	linksMap := make(map[string]struct{})
@@ -200,18 +173,6 @@ func updateHeaderPath(current []string, level int, title string) []string {
 		current = current[:level-1]
 	}
 	return append(current, title)
-}
-
-func (p *MDParser) filterSmallChunks(chunks []chunk) []chunk {
-	var result []chunk
-
-	for _, chunk := range chunks {
-		if len(chunk.Content) < p.minChunkSize {
-			continue
-		}
-		result = append(result, chunk)
-	}
-	return result
 }
 
 func uniqueStrings(input []string) []string {

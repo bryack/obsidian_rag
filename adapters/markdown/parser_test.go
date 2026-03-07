@@ -15,6 +15,13 @@ var (
 	minChunkSize    = 50
 )
 
+func TestNewMDParser(t *testing.T) {
+	t.Run("returns error for invalid parameters", func(t *testing.T) {
+		_, err := NewMDParser(-1, 1000, 50)
+		assert.Error(t, err)
+	})
+}
+
 func TestParse(t *testing.T) {
 	t.Run("simple content", func(t *testing.T) {
 		testDoc := domain.Document{
@@ -22,7 +29,8 @@ func TestParse(t *testing.T) {
 			Content:  "Hello World. And some text to be a good chunk to parse",
 		}
 
-		parser := NewMDParser(maxChunkSize, mergeChunkLimit, minChunkSize)
+		parser, err := NewMDParser(maxChunkSize, mergeChunkLimit, minChunkSize)
+		assert.NoError(t, err)
 		docs, err := parser.Parse(testDoc)
 		assert.NoError(t, err)
 
@@ -43,7 +51,8 @@ Real content here. And some text to be a good chunk to parse`
 			FilePath: "real_content.md",
 			Content:  contentWithYAML,
 		}
-		parser := NewMDParser(maxChunkSize, mergeChunkLimit, minChunkSize)
+		parser, err := NewMDParser(maxChunkSize, mergeChunkLimit, minChunkSize)
+		assert.NoError(t, err)
 		docs, err := parser.Parse(testDoc)
 		assert.NoError(t, err)
 
@@ -62,7 +71,8 @@ Real content here. And some text to be a good chunk to parse`
 			Content:  string(testData),
 		}
 
-		parser := NewMDParser(maxChunkSize, mergeChunkLimit, minChunkSize)
+		parser, err := NewMDParser(maxChunkSize, mergeChunkLimit, minChunkSize)
+		assert.NoError(t, err)
 		chunks, err := parser.Parse(testDoc)
 		assert.NoError(t, err)
 
@@ -83,7 +93,8 @@ tags: [test]
 		testDoc := domain.Document{
 			Content: content,
 		}
-		parser := NewMDParser(maxChunkSize, mergeChunkLimit, minChunkSize)
+		parser, err := NewMDParser(maxChunkSize, mergeChunkLimit, minChunkSize)
+		assert.NoError(t, err)
 
 		docs, err := parser.Parse(testDoc)
 		assert.NoError(t, err)
@@ -97,7 +108,8 @@ tags: [test]
 			Content: "Hello World",
 		}
 
-		parser := NewMDParser(maxChunkSize, mergeChunkLimit, minChunkSize)
+		parser, err := NewMDParser(maxChunkSize, mergeChunkLimit, minChunkSize)
+		assert.NoError(t, err)
 		docs, err := parser.Parse(testDoc)
 		assert.NoError(t, err)
 
@@ -132,7 +144,8 @@ tags: [test]
 		Content: content,
 	}
 
-	parser := NewMDParser(500, mergeChunkLimit, minChunkSize)
+	parser, err := NewMDParser(maxChunkSize, mergeChunkLimit, minChunkSize)
+	assert.NoError(t, err)
 	docs, err := parser.Parse(testDoc)
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(docs))
@@ -152,7 +165,8 @@ tags: [test]
 		Content: content,
 	}
 
-	parser := NewMDParser(500, 1000, 5)
+	parser, err := NewMDParser(500, 1000, 5)
+	assert.NoError(t, err)
 	docs, err := parser.Parse(testDoc)
 	assert.NoError(t, err)
 	assert.Equal(t, 2, len(docs))
@@ -180,7 +194,8 @@ tags: [test]
 		Content: content,
 	}
 
-	parser := NewMDParser(500, mergeChunkLimit, minChunkSize)
+	parser, err := NewMDParser(500, mergeChunkLimit, minChunkSize)
+	assert.NoError(t, err)
 	docs, err := parser.Parse(testDoc)
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(docs))
@@ -190,7 +205,8 @@ func TestMDParser_Wikilinks(t *testing.T) {
 	content := `Check this [[My Note]] and this [[Other Note|Alias]] and also [[Note With Fragment#Section]].`
 	testDoc := domain.Document{Content: content}
 
-	parser := NewMDParser(500, 1000, 5)
+	parser, err := NewMDParser(500, 1000, 5)
+	assert.NoError(t, err)
 	docs, err := parser.Parse(testDoc)
 
 	assert.NoError(t, err)
