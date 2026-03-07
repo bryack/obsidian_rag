@@ -3,9 +3,10 @@ package domain
 import "context"
 
 type SpyVectorStore struct {
-	SaveCalled int
-	Hashes     map[string]string
-	Documents  []Document
+	SaveCalled      int
+	Hashes          map[string]string
+	Documents       []Document
+	LastSearchScope Scope
 }
 
 func (s *SpyVectorStore) Save(ctx context.Context, doc Document) error {
@@ -33,6 +34,11 @@ func (s *SpyVectorStore) SaveBatch(ctx context.Context, docs []Document) error {
 		}
 	}
 	return nil
+}
+
+func (s *SpyVectorStore) SearchWithScope(ctx context.Context, query SearchQuery) ([]Document, error) {
+	s.LastSearchScope = query.Scope
+	return s.Documents, nil
 }
 
 type StubNoteRepository struct {

@@ -110,9 +110,26 @@ func (q *QdrantStore) ensureCollection(ctx context.Context) error {
 				},
 			}),
 		})
+
 		if err != nil {
 			return fmt.Errorf("failed to create collection: %w", err)
 		}
+
+		wait := true
+		_, err = q.client.CreateFieldIndex(ctx, &qdrant.CreateFieldIndexCollection{
+			CollectionName: collectionName,
+			FieldName:      filepath,
+			FieldIndexParams: &qdrant.PayloadIndexParams{
+				IndexParams: &qdrant.PayloadIndexParams_KeywordIndexParams{
+					KeywordIndexParams: &qdrant.KeywordIndexParams{},
+				},
+			},
+			Wait: &wait,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to create field index for file_path: %w", err)
+		}
+
 	}
 	return nil
 }
@@ -179,6 +196,10 @@ func (q *QdrantStore) Search(ctx context.Context, vector []float32, sparse map[u
 	}
 
 	return docs, nil
+}
+
+func (q *QdrantStore) SearchWithScope(ctx context.Context, query domain.SearchQuery) ([]domain.Document, error) {
+	return nil, fmt.Errorf("not implemented yet")
 }
 
 func (q *QdrantStore) payloadToDocument(payload map[string]*qdrant.Value) domain.Document {

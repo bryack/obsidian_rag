@@ -7,6 +7,14 @@ type VectorStore interface {
 	Search(ctx context.Context, vector []float32, sparse map[uint32]float32) ([]Document, error)
 	GetAllHashes(ctx context.Context) (map[string]string, error)
 	SaveBatch(ctx context.Context, docs []Document) error
+	SearchWithScope(ctx context.Context, query SearchQuery) ([]Document, error)
+}
+
+type SearchQuery struct {
+	DenseVector  []float32
+	SparseVector map[uint32]float32
+	Scope        Scope
+	Limit        int
 }
 
 type NoteRepository interface {
@@ -24,6 +32,12 @@ type EmbeddingFormatter interface {
 
 type Tokenizer interface {
 	ToSparseVector(text string) map[uint32]float32
+}
+
+// Scope represents a filtering criterion for search operations.
+// Implementations define specific filtering strategies (folder, tags, etc.).
+type Scope interface {
+	Name() string
 }
 
 type Document struct {

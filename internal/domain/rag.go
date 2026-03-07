@@ -29,6 +29,15 @@ func NewRagEngine(repo NoteRepository, store VectorStore, parser Parser, tokeniz
 	}
 }
 
+type AskQuery struct {
+	Question string
+	Scope    Scope
+}
+
+func (re *RagEngine) AskWithScope(ctx context.Context, query AskQuery) (string, error) {
+	return "", fmt.Errorf("not implemented yet")
+}
+
 func (re *RagEngine) Ask(ctx context.Context, question string) (string, error) {
 	vector, err := re.embedder.EmbedQuery(ctx, question)
 	if err != nil {
