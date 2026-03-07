@@ -18,6 +18,10 @@ type Embedder interface {
 	EmbedDocuments(ctx context.Context, text []string) ([][]float32, error)
 }
 
+type EmbeddingFormatter interface {
+	Format(doc Document) string
+}
+
 type Tokenizer interface {
 	ToSparseVector(text string) map[uint32]float32
 }
