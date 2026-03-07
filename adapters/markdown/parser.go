@@ -27,9 +27,8 @@ func NewMDParser(chunkSize, mergeChunkLimit, minChunkSize int) (*MDParser, error
 	gm := goldmark.New(goldmark.WithExtensions(&frontmatter.Extender{}, &wikilink.Extender{}))
 
 	return &MDParser{
-		goldmark:  gm,
-		chunker:   NewChunker(mergeChunkLimit, minChunkSize),
-		chunkSize: chunkSize,
+		goldmark: gm,
+		chunker:  NewChunker(chunkSize, mergeChunkLimit, minChunkSize),
 	}, nil
 }
 

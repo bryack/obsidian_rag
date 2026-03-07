@@ -17,7 +17,7 @@ var (
 
 func TestNewMDParser(t *testing.T) {
 	t.Run("returns error for invalid parameters", func(t *testing.T) {
-		_, err := NewMDParser(-1, 1000, 50)
+		_, err := NewMDParser(-1, mergeChunkLimit, minChunkSize)
 		assert.Error(t, err)
 	})
 }
@@ -165,7 +165,7 @@ tags: [test]
 		Content: content,
 	}
 
-	parser, err := NewMDParser(500, 1000, 5)
+	parser, err := NewMDParser(500, 1000, minChunkSize)
 	assert.NoError(t, err)
 	docs, err := parser.Parse(testDoc)
 	assert.NoError(t, err)
@@ -194,7 +194,7 @@ tags: [test]
 		Content: content,
 	}
 
-	parser, err := NewMDParser(500, mergeChunkLimit, minChunkSize)
+	parser, err := NewMDParser(maxChunkSize, mergeChunkLimit, minChunkSize)
 	assert.NoError(t, err)
 	docs, err := parser.Parse(testDoc)
 	assert.NoError(t, err)
