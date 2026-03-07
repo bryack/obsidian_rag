@@ -64,4 +64,16 @@ func TestScanner_Scan(t *testing.T) {
 		assert.Equal(t, []string{"H1", "H2", "H3"}, got[2].HeaderPath)
 		assert.Equal(t, []string{"H1", "Another H2"}, got[3].HeaderPath)
 	})
+
+	t.Run("adds spaces between elements", func(t *testing.T) {
+		content := "- Item 1\n- Item 2"
+		source := []byte(content)
+		reader := text.NewReader(source)
+		docNode := gm.Parser().Parse(reader)
+
+		got := scanner.Scan(docNode, source)
+		want := "Item 1 Item 2"
+
+		assert.Equal(t, want, got[0].Content)
+	})
 }

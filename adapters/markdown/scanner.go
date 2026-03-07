@@ -77,8 +77,15 @@ func extractNodeText(node ast.Node, source []byte) (string, []string) {
 
 	ast.Walk(node, func(n ast.Node, entering bool) (ast.WalkStatus, error) {
 		if entering {
-			if t, ok := n.(*ast.Text); ok {
-				builder.Write(t.Value(source))
+			switch n.Kind() {
+			case ast.KindText:
+				t := n.(*ast.Text)
+				val := t.Value(source)
+				builder.Write(val)
+			case ast.KindParagraph, ast.KindListItem:
+				if builder.Len() > 0 {
+					builder.WriteString(" ")
+				}
 			}
 
 			if wl, ok := n.(*wikilink.Node); ok {

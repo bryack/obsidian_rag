@@ -50,7 +50,8 @@ func (re *RagEngine) Ask(ctx context.Context, question string) (string, error) {
 	builder.WriteString(fmt.Sprintf("Результаты поиска для: %q\n\n", question))
 	for i, chunk := range chunks {
 		builder.WriteString(fmt.Sprintf("[%d] (Score: %.4f) Файл: %s\n", i+1, chunk.Score, chunk.FilePath))
-		builder.WriteString(chunk.Content + "\n")
+		formatted := re.formatter.Format(chunk)
+		builder.WriteString(formatted + "\n")
 		builder.WriteString("------------------------------------------\n\n")
 	}
 
