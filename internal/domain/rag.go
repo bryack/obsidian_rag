@@ -13,16 +13,18 @@ type RagEngine struct {
 	parser    Parser
 	embedder  Embedder
 	tokenizer Tokenizer
+	formatter EmbeddingFormatter
 	batchSize int
 }
 
-func NewRagEngine(repo NoteRepository, store VectorStore, parser Parser, tokenizer Tokenizer, embedder Embedder) *RagEngine {
+func NewRagEngine(repo NoteRepository, store VectorStore, parser Parser, tokenizer Tokenizer, embedder Embedder, formatter EmbeddingFormatter) *RagEngine {
 	return &RagEngine{
 		store:     store,
 		repo:      repo,
 		parser:    parser,
 		embedder:  embedder,
 		tokenizer: tokenizer,
+		formatter: formatter,
 		batchSize: 8,
 	}
 }
@@ -127,7 +129,8 @@ func (re *RagEngine) processBatch(ctx context.Context, batch []Document) error {
 			batch[i].Vector.Dense = make([]float32, 1024)
 		} else {
 			batch[i].Vector.SparseVector = re.tokenizer.ToSparseVector(content)
-			textToEmbed = append(textToEmbed, content)
+			formatted := re.formatter.Format(c)
+			textToEmbed = append(textToEmbed, formatted)
 			indicesToEmbed = append(indicesToEmbed, i)
 		}
 	}

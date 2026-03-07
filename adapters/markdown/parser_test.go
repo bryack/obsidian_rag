@@ -27,7 +27,7 @@ func TestParse(t *testing.T) {
 		assert.NoError(t, err)
 
 		assert.Equal(t, 1, len(docs))
-		assert.Equal(t, "File: simple_content.md\nHello World. And some text to be a good chunk to parse", docs[0].Content)
+		assert.Equal(t, "Hello World. And some text to be a good chunk to parse", docs[0].Content)
 	})
 
 	t.Run("with frontmatter", func(t *testing.T) {
@@ -49,7 +49,7 @@ Real content here. And some text to be a good chunk to parse`
 
 		assert.Equal(t, []string{"obsidian", "rag"}, docs[0].Metadata.Tags)
 		assert.Equal(t, []string{"obsidian-rag"}, docs[0].Metadata.Project)
-		assert.Equal(t, "File: real_content.md\nReal content here. And some text to be a good chunk to parse", docs[0].Content)
+		assert.Equal(t, "Real content here. And some text to be a good chunk to parse", docs[0].Content)
 	})
 
 	t.Run("splitting", func(t *testing.T) {

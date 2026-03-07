@@ -47,8 +47,9 @@ func main() {
 	parser := markdown.NewMDParser(chunkSize, mergeChunkLimit, minChunkSize)
 	embedder := ollama.NewOllamaEmbedder(embedModelName, *ollamaURL)
 	tokenizer := tokenizer.NewTokenizer()
+	formatter := &domain.DefaultFormatter{}
 
-	engine := domain.NewRagEngine(repo, store, parser, tokenizer, embedder)
+	engine := domain.NewRagEngine(repo, store, parser, tokenizer, embedder, formatter)
 
 	switch command {
 	case "index":

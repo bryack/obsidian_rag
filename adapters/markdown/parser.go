@@ -57,14 +57,13 @@ func (p *MDParser) Parse(doc domain.Document) ([]domain.Document, error) {
 	var docs []domain.Document
 
 	for _, c := range filtered {
-		content := p.buildEmbeddingText(doc.FilePath, c.HeaderPath, c.Content)
 		chunkMeta := meta
 		chunkMeta.Links = uniqueStrings(append(chunkMeta.Links, c.Links...))
 
 		docs = append(docs, domain.Document{
 			FilePath:   doc.FilePath,
 			Hash:       doc.Hash,
-			Content:    content,
+			Content:    c.Content,
 			HeaderPath: c.HeaderPath,
 			Metadata:   chunkMeta,
 		})
@@ -213,23 +212,6 @@ func (p *MDParser) filterSmallChunks(chunks []chunk) []chunk {
 		result = append(result, chunk)
 	}
 	return result
-}
-
-func (p *MDParser) buildEmbeddingText(file string, headers []string, content string) string {
-	var builder strings.Builder
-
-	builder.WriteString("File: ")
-	builder.WriteString(file)
-	builder.WriteString("\n")
-
-	if len(headers) > 0 {
-		builder.WriteString("Section: ")
-		builder.WriteString(strings.Join(headers, " / "))
-		builder.WriteString("\n\n")
-	}
-
-	builder.WriteString(content)
-	return builder.String()
 }
 
 func uniqueStrings(input []string) []string {

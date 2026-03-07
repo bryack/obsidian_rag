@@ -12,6 +12,7 @@ func TestRagEngine_Ask(t *testing.T) {
 
 	t.Run("real search", func(t *testing.T) {
 		ctx := context.Background()
+		formatter := &DefaultFormatter{}
 		tokenizer := &StubTokenizer{}
 		store := &SpyVectorStore{
 			Documents: []Document{
@@ -22,7 +23,7 @@ func TestRagEngine_Ask(t *testing.T) {
 		parser := &StubParser{}
 		embedder := &SpyEmbedder{}
 
-		engine := NewRagEngine(repo, store, parser, tokenizer, embedder)
+		engine := NewRagEngine(repo, store, parser, tokenizer, embedder, formatter)
 		engine.Sync(ctx)
 
 		answer, err := engine.Ask(ctx, "На чем написан проект?")
@@ -33,6 +34,7 @@ func TestRagEngine_Ask(t *testing.T) {
 }
 
 func TestRagEngine_Sync(t *testing.T) {
+	formatter := &DefaultFormatter{}
 	t.Run("happy path", func(t *testing.T) {
 		ctx := context.Background()
 		tokenizer := &StubTokenizer{}
@@ -43,7 +45,7 @@ func TestRagEngine_Sync(t *testing.T) {
 		parser := &StubParser{Items: []Document{{FilePath: "note.md", Hash: "v1", Content: "Hello!"}}}
 		embedder := &SpyEmbedder{vector: []float32{0.1, 0.2}}
 
-		engine := NewRagEngine(repo, store, parser, tokenizer, embedder)
+		engine := NewRagEngine(repo, store, parser, tokenizer, embedder, formatter)
 
 		err := engine.Sync(ctx)
 		assert.NoError(t, err)
@@ -72,7 +74,7 @@ func TestRagEngine_Sync(t *testing.T) {
 		parser := &StubParser{}
 		embedder := &SpyEmbedder{vector: []float32{0.1, 0.2}}
 
-		engine := NewRagEngine(repo, store, parser, tokenizer, embedder)
+		engine := NewRagEngine(repo, store, parser, tokenizer, embedder, formatter)
 
 		err := engine.Sync(context.Background())
 		assert.NoError(t, err)
@@ -92,7 +94,7 @@ func TestRagEngine_Sync(t *testing.T) {
 		}}
 		embedder := &SpyEmbedder{vector: []float32{0.1}}
 
-		engine := NewRagEngine(repo, store, parser, tokenizer, embedder)
+		engine := NewRagEngine(repo, store, parser, tokenizer, embedder, formatter)
 		err := engine.Sync(context.Background())
 		assert.NoError(t, err)
 
@@ -113,7 +115,7 @@ func TestRagEngine_Sync(t *testing.T) {
 		}}
 		embedder := &SpyEmbedder{vector: []float32{0.1}}
 
-		engine := NewRagEngine(repo, store, parser, tokenizer, embedder)
+		engine := NewRagEngine(repo, store, parser, tokenizer, embedder, formatter)
 		err := engine.Sync(context.Background())
 		assert.NoError(t, err)
 
