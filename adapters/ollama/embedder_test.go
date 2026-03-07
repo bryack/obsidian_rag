@@ -3,6 +3,7 @@ package ollama
 import (
 	"context"
 	"encoding/json"
+	"math"
 	"net/http"
 	"testing"
 
@@ -12,7 +13,7 @@ import (
 )
 
 const (
-	modelName = "argus-ai/pplx-embed-v1-0.6b:fp32"
+	modelName = "bge-m3:latest"
 	baseURL   = "http://localhost:11434"
 )
 
@@ -111,4 +112,69 @@ func BenchmarkOllamaEmbedder_Batch(b *testing.B) {
 		_, err := embedder.EmbedDocuments(context.Background(), texts)
 		require.NoError(b, err)
 	}
+}
+
+func TestOllamaEmbedder_SemanticSimilarity(t *testing.T) {
+	const (
+		modelName = "bge-m3:latest"
+		baseURL   = "http://localhost:11434/api/embed"
+	)
+
+	embedder := NewOllamaEmbedder(modelName, baseURL)
+	ctx := context.Background()
+
+	t.Run("validates semantic distance in Russian", func(t *testing.T) {
+		queries := []string{
+			"Как настроить Docker контейнер?",
+			"Как сконфигурировать Docker контейнер?", // Парафраз (высокое сходство)
+			"Настройка Kubernetes кластера",          // Связанная тема (среднее сходство)
+			"Рецепт приготовления пиццы",             // Совершенно другая тема (низкое сходство)
+		}
+
+		embeddings, err := embedder.EmbedDocuments(ctx, queries)
+		require.NoError(t, err, "Ollama must be running and model must be pulled")
+		require.Equal(t, 4, len(embeddings), "Should return exactly 4 embeddings")
+
+		cosineSimilarity := func(a, b []float32) float64 {
+			if len(a) != len(b) {
+				return 0.0
+			}
+			var dotProduct, normA, normB float64
+			for i := range a {
+				valA := float64(a[i])
+				valB := float64(b[i])
+				dotProduct += valA * valB
+				normA += valA * valA
+				normB += valB * valB
+			}
+
+			if normA == 0 || normB == 0 {
+				return 0.0
+			}
+
+			return dotProduct / (math.Sqrt(normA) * math.Sqrt(normB))
+		}
+
+		similarityParaphrase := cosineSimilarity(embeddings[0], embeddings[1])
+		similarityRelated := cosineSimilarity(embeddings[0], embeddings[2])
+		similarityIrrelevant := cosineSimilarity(embeddings[0], embeddings[3])
+
+		t.Logf("--- Semantic Analysis Results ---")
+		t.Logf("Query A: %s", queries[0])
+		t.Logf("Query B (Paraphrase): %.4f similarity", similarityParaphrase)
+		t.Logf("Query C (Related):    %.4f similarity", similarityRelated)
+		t.Logf("Query D (Irrelevant): %.4f similarity", similarityIrrelevant)
+
+		assert.Greater(t, similarityParaphrase, 0.8,
+			"Paraphrase similarity (%.4f) should be high (> 0.8)", similarityParaphrase)
+
+		assert.Less(t, similarityIrrelevant, 0.4,
+			"Irrelevant similarity (%.4f) should be low (< 0.4)", similarityIrrelevant)
+
+		assert.Greater(t, similarityParaphrase, similarityRelated,
+			"Paraphrase should be closer than just related topic")
+
+		assert.Greater(t, similarityRelated, similarityIrrelevant,
+			"Related topic should be closer than completely irrelevant text")
+	})
 }

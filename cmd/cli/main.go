@@ -19,7 +19,7 @@ const (
 	chunkSize       = 1000
 	mergeChunkLimit = 1500
 	minChunkSize    = 200
-	embedModelName  = "argus-ai/pplx-embed-v1-0.6b:fp32"
+	embedModelName  = "bge-m3:latest"
 )
 
 var (
