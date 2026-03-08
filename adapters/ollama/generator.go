@@ -52,7 +52,7 @@ func (og *OllamaGenerator) Generate(ctx context.Context, question, contextText s
 		Stream: false,
 		Options: map[string]interface{}{
 			"temperature": 0.1,
-			"num_ctx":     8192,
+			"num_ctx":     16384,
 		},
 		KeepAlive: "5m",
 	}
