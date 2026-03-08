@@ -114,22 +114,6 @@ func (q *QdrantStore) ensureCollection(ctx context.Context) error {
 		if err != nil {
 			return fmt.Errorf("failed to create collection: %w", err)
 		}
-
-		wait := true
-		_, err = q.client.CreateFieldIndex(ctx, &qdrant.CreateFieldIndexCollection{
-			CollectionName: collectionName,
-			FieldName:      filepath,
-			FieldIndexParams: &qdrant.PayloadIndexParams{
-				IndexParams: &qdrant.PayloadIndexParams_KeywordIndexParams{
-					KeywordIndexParams: &qdrant.KeywordIndexParams{},
-				},
-			},
-			Wait: &wait,
-		})
-		if err != nil {
-			return fmt.Errorf("failed to create field index for file_path: %w", err)
-		}
-
 	}
 	return nil
 }
@@ -199,7 +183,46 @@ func (q *QdrantStore) Search(ctx context.Context, vector []float32, sparse map[u
 }
 
 func (q *QdrantStore) SearchWithScope(ctx context.Context, query domain.SearchQuery) ([]domain.Document, error) {
-	return nil, fmt.Errorf("not implemented yet")
+	var mustCondition []*qdrant.Condition
+
+	if folderScope, ok := query.Scope.(domain.FolderScope); ok && folderScope.Path != "" {
+		mustCondition = append(mustCondition, qdrant.NewMatchText(filepath, folderScope.Path))
+	}
+
+	result, err := q.client.Query(ctx, &qdrant.QueryPoints{
+		CollectionName: collectionName,
+		Prefetch: []*qdrant.PrefetchQuery{
+			{
+				Query: qdrant.NewQuery(query.DenseVector...),
+				Limit: qdrant.PtrOf(uint64(50)),
+			},
+			{
+				Query: qdrant.NewQuerySparse(prepareSparse(query.SparseVector)),
+				Using: qdrant.PtrOf("text"),
+				Limit: qdrant.PtrOf(uint64(50)),
+			},
+		},
+		Query:       qdrant.NewQueryFusion(qdrant.Fusion_RRF),
+		Limit:       qdrant.PtrOf(uint64(query.Limit)),
+		WithPayload: qdrant.NewWithPayload(true),
+		Filter: &qdrant.Filter{
+			MustNot: []*qdrant.Condition{
+				qdrant.NewMatch(content, ""),
+			},
+			Must: mustCondition,
+		},
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed scoped search: %w", err)
+	}
+
+	var docs []domain.Document
+	for _, p := range result {
+		doc := q.payloadToDocument(p.Payload)
+		doc.Score = p.Score
+		docs = append(docs, doc)
+	}
+	return docs, nil
 }
 
 func (q *QdrantStore) payloadToDocument(payload map[string]*qdrant.Value) domain.Document {

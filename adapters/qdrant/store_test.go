@@ -37,10 +37,10 @@ func TestQdrant_Integration(t *testing.T) {
 	testVector[0] = 1.0
 
 	doc := domain.Document{
-		FilePath: "note.md",
-		Hash:     "hash-of-file",
-		Content:  "В Obsidian RAG используется Go.",
-		Vector:   domain.VectorData{Dense: testVector},
+		FilePath:   "note.md",
+		Hash:       "hash-of-file",
+		Content:    "В Obsidian RAG используется Go.",
+		Vector:     domain.VectorData{Dense: testVector},
 		HeaderPath: []string{"Technology", "Go"},
 		Metadata: domain.Metadata{
 			Tags:    []string{"programming", "obsidian"},
@@ -171,5 +171,34 @@ func TestQdrant_Integration(t *testing.T) {
 		assert.NoError(t, err)
 		assert.NotEmpty(t, result)
 		assert.Equal(t, "hybrid.md", result[0].FilePath)
+	})
+
+	t.Run("SearchWithScope filters by folder prefix", func(t *testing.T) {
+		err := store.clear(ctx)
+		require.NoError(t, err)
+
+		docs := []domain.Document{
+			{FilePath: "work/report.md", Content: "Work report content", Vector: domain.VectorData{Dense: make([]float32, 1024)}},
+			{FilePath: "work/notes.md", Content: "Meeting notes", Vector: domain.VectorData{Dense: make([]float32, 1024)}},
+			{FilePath: "personal/diary.md", Content: "Personal diary entry", Vector: domain.VectorData{Dense: make([]float32, 1024)}},
+		}
+
+		require.NoError(t, store.SaveBatch(ctx, docs))
+
+		query := domain.SearchQuery{
+			DenseVector:  make([]float32, 1024),
+			SparseVector: map[uint32]float32{},
+			Scope:        domain.FolderScope{Path: "work/"},
+			Limit:        10,
+		}
+
+		result, err := store.SearchWithScope(ctx, query)
+		require.NoError(t, err)
+
+		assert.Len(t, result, 2, "Should only find 2 documents in 'work/' folder")
+		for _, res := range result {
+			assert.Contains(t, res.FilePath, "work/", "Result should be from 'work/' folder")
+			assert.NotContains(t, res.FilePath, "personal/", "Result should NOT be from 'personal/' folder")
+		}
 	})
 }
