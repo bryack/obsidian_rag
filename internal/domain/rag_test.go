@@ -26,7 +26,11 @@ func TestRagEngine_Ask(t *testing.T) {
 		engine := NewRagEngine(repo, store, parser, tokenizer, embedder, formatter)
 		engine.Sync(ctx)
 
-		answer, err := engine.Ask(ctx, "На чем написан проект?")
+		query := AskQuery{
+			Question: "На чем написан проект?",
+			Scope:    AllScope{},
+		}
+		answer, err := engine.Ask(ctx, query)
 
 		assert.NoError(t, err)
 		assert.Contains(t, answer, "Go")
@@ -125,4 +129,30 @@ func TestRagEngine_Sync(t *testing.T) {
 		assert.Equal(t, 1, len(store.Documents[0].Vector.Dense))
 		assert.Equal(t, 1024, len(store.Documents[1].Vector.Dense))
 	})
+}
+
+func TestRagEngine_AskWithScope(t *testing.T) {
+	ctx := context.Background()
+
+	tokenizer := &StubTokenizer{}
+	store := &SpyVectorStore{
+		Documents: []Document{
+			{FilePath: "work/note.md", Content: "test content", Score: 0.9},
+		},
+	}
+	repo := &StubNoteRepository{
+		Docs: []Document{
+			{FilePath: "work/note.md", Hash: "v1", Content: "test"},
+			{FilePath: "personal/note.md", Hash: "v2", Content: "personal info"},
+		},
+	}
+	parser := &StubParser{Items: []Document{{FilePath: "work/note.md", Hash: "v1", Content: "test"}}}
+	embedder := &SpyEmbedder{vector: []float32{0.1, 0.2}}
+	formatter := &DefaultFormatter{}
+	engine := NewRagEngine(repo, store, parser, tokenizer, embedder, formatter)
+
+	scope := FolderScope{Path: "work/"}
+	_, err := engine.Ask(ctx, AskQuery{Question: "test", Scope: scope})
+	assert.NoError(t, err)
+	assert.Equal(t, scope, store.LastSearchScope)
 }

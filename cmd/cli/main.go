@@ -23,8 +23,9 @@ const (
 )
 
 var (
-	qdrantAddr = flag.String("qdrant", "localhost:6334", "qdrant gRPC address")
-	ollamaURL  = flag.String("ollama", "http://localhost:11434/api/embed", "ollama embedding URL")
+	qdrantAddr   = flag.String("qdrant", "localhost:6334", "qdrant gRPC address")
+	ollamaURL    = flag.String("ollama", "http://localhost:11434/api/embed", "ollama embedding URL")
+	folderFilter = flag.String("folder", "", "filter search by folder path (e.g. 'Work/Projects')")
 )
 
 func main() {
@@ -33,6 +34,11 @@ func main() {
 	args := flag.Args()
 	if len(args) < 2 {
 		fmt.Println("Usage: obsidian-rag [flags] <command> <vault_path> [question]")
+		fmt.Println("\nCommands:")
+		fmt.Println("  index <vault_path>          - indexing all notes")
+		fmt.Println("  ask   <vault_path> <query>  - ask a question (use -folder to scope)")
+		fmt.Println("\nFlags:")
+		flag.PrintDefaults()
 		return
 	}
 
@@ -64,15 +70,26 @@ func main() {
 		}
 	case "ask":
 		if len(args) < 3 {
-			fmt.Println("Usage: obsidian-rag ask <vault_path> <question>")
+			fmt.Println("Usage: obsidian-rag [flags] ask <vault_path> <question>")
 			return
 		}
+
+		var scope domain.Scope = domain.AllScope{}
+		if *folderFilter != "" {
+			scope = domain.FolderScope{Path: *folderFilter}
+		}
+
+		askQuery := domain.AskQuery{
+			Question: args[2],
+			Scope:    scope,
+		}
+
 		err := engine.Sync(ctx)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Index error: %v\n", err)
 			os.Exit(1)
 		}
-		answer, err := engine.Ask(ctx, args[2])
+		answer, err := engine.Ask(ctx, askQuery)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)

@@ -34,29 +34,32 @@ type AskQuery struct {
 	Scope    Scope
 }
 
-func (re *RagEngine) AskWithScope(ctx context.Context, query AskQuery) (string, error) {
-	return "", fmt.Errorf("not implemented yet")
-}
-
-func (re *RagEngine) Ask(ctx context.Context, question string) (string, error) {
-	vector, err := re.embedder.EmbedQuery(ctx, question)
+func (re *RagEngine) Ask(ctx context.Context, query AskQuery) (string, error) {
+	vector, err := re.embedder.EmbedQuery(ctx, query.Question)
 	if err != nil {
-		return "", fmt.Errorf("failed to get vector for question %q: %w", question, err)
+		return "", fmt.Errorf("failed to get vector for question %q: %w", query.Question, err)
 	}
 
-	sparse := re.tokenizer.ToSparseVector(question)
+	sparse := re.tokenizer.ToSparseVector(query.Question)
 
-	chunks, err := re.store.Search(ctx, vector, sparse)
+	searchQuery := SearchQuery{
+		DenseVector:  vector,
+		SparseVector: sparse,
+		Scope:        query.Scope,
+		Limit:        10,
+	}
+
+	chunks, err := re.store.SearchWithScope(ctx, searchQuery)
 	if err != nil {
-		return "", fmt.Errorf("failed to search info for question: %q: %w", question, err)
+		return "", fmt.Errorf("failed to search info for question: %q: %w", query.Question, err)
 	}
 
 	if len(chunks) == 0 {
-		return "", fmt.Errorf("can't find any documents for question %q", question)
+		return "", fmt.Errorf("can't find any documents for question %q", query.Question)
 	}
 
 	var builder strings.Builder
-	builder.WriteString(fmt.Sprintf("Результаты поиска для: %q\n\n", question))
+	builder.WriteString(fmt.Sprintf("Результаты поиска для: %q (Область: %s)\n\n", query.Question, query.Scope.Name()))
 	for i, chunk := range chunks {
 		builder.WriteString(fmt.Sprintf("[%d] (Score: %.4f) Файл: %s\n", i+1, chunk.Score, chunk.FilePath))
 		formatted := re.formatter.Format(chunk)
