@@ -40,6 +40,14 @@ type Scope interface {
 	Name() string
 }
 
+type AnswerGenerator interface {
+	Generate(ctx context.Context, question string, context string) (string, error)
+}
+
+type ContextBuilder interface {
+	BuildContext(chunks []Document) string
+}
+
 type Document struct {
 	FilePath string `yaml:"file_path"`
 	Hash     string `yaml:"hash"`

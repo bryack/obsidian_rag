@@ -80,3 +80,17 @@ type StubTokenizer struct{}
 func (st *StubTokenizer) ToSparseVector(text string) map[uint32]float32 {
 	return map[uint32]float32{1: 1.0}
 }
+
+type SpyGenerator struct {
+	Answer string
+}
+
+func (g *SpyGenerator) Generate(ctx context.Context, question string, context string) (string, error) {
+	return g.Answer, nil
+}
+
+type StubContextBuilder struct{}
+
+func (cb *StubContextBuilder) BuildContext(chunks []Document) string {
+	return ""
+}

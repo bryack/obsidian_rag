@@ -156,3 +156,26 @@ func TestRagEngine_AskWithScope(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, scope, store.LastSearchScope)
 }
+
+func TestRagEngine_Ask_WithGeneration(t *testing.T) {
+	ctx := context.Background()
+
+	store := &SpyVectorStore{
+		Documents: []Document{{Content: "найденный контент"}},
+	}
+	generator := &SpyGenerator{Answer: "ответ от ИИ"}
+	contextBuilder := &StubContextBuilder{}
+
+	engine := NewRagEngine(nil, store, nil, &StubTokenizer{}, &SpyEmbedder{}, &DefaultFormatter{})
+	engine.SetGenerator(generator, contextBuilder)
+
+	query := AskQuery{
+		Question: "как дела?",
+		Scope:    AllScope{},
+		Generate: true,
+	}
+
+	answer, err := engine.Ask(ctx, query)
+	assert.NoError(t, err)
+	assert.Equal(t, "ответ от ИИ", answer)
+}
