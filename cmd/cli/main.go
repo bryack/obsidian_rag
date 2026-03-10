@@ -89,12 +89,6 @@ func main() {
 			Generate: *llmFlag,
 		}
 
-		// err := engine.Sync(ctx)
-		// if err != nil {
-		// 	fmt.Fprintf(os.Stderr, "Index error: %v\n", err)
-		// 	os.Exit(1)
-		// }
-
 		if *llmFlag {
 			fmt.Fprintf(os.Stderr, "AI Mode: Generating answer through %s...\n", llmModelName)
 			generator := ollama.NewOllamaGenerator(llmURL, llmModelName)
