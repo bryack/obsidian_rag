@@ -11,10 +11,15 @@ import (
 type OllamaGenerator struct {
 	baseURL string
 	model   string
+	client  *http.Client
 }
 
 func NewOllamaGenerator(baseURL, model string) *OllamaGenerator {
-	return &OllamaGenerator{baseURL: baseURL, model: model}
+	return &OllamaGenerator{
+		baseURL: baseURL,
+		model:   model,
+		client:  &http.Client{},
+	}
 }
 
 type generateRequest struct {
@@ -31,30 +36,30 @@ type generateResponse struct {
 }
 
 func (og *OllamaGenerator) Generate(ctx context.Context, question, contextText string) (string, error) {
-	prompt := fmt.Sprintf(`Ты — ассистент по базе знаний Obsidian. Твоя задача — отвечать на вопросы пользователя, используя ТОЛЬКО предоставленный ниже контекст. 
+	prompt := fmt.Sprintf(`Ты — аналитик заметок Obsidian. Твоя задача — найти ответ в КОНТЕКСТЕ.
 
-ИНСТРУКЦИИ:
-1. Отвечай на русском языке.
-2. Если в контексте нет ответа на вопрос, честно скажи: "В моих заметках нет информации по этому вопросу".
-3. Не используй свои внешние знания, только то, что написано в блоке КОНТЕКСТ.
-4. Ответ должен быть лаконичным и структурированным.
+   ПРАВИЛА:
+   - Отвечай на русском языке.
+   - Отвечай развёрнуто.
+   - Будь гибким в названиях: название может быть с заглавными или строчными буквами - это не важно.
+   - Если в тексте есть хоть какая-то информация, используй её.
+   - Если информации совсем нет, тогда ответь "В моих заметках нет информации".
 
 КОНТЕКСТ:
 %s
 
 ВОПРОС: %s
-
-ОТВЕТ:`, contextText, question)
+`, contextText, question)
 
 	reqBody := generateRequest{
 		Model:  og.model,
 		Prompt: prompt,
 		Stream: false,
 		Options: map[string]interface{}{
-			"temperature": 0.1,
+			"temperature": 0.5,
 			"num_ctx":     16384,
 		},
-		KeepAlive: "5m",
+		KeepAlive: "10m",
 	}
 
 	jsonData, err := json.Marshal(reqBody)
@@ -68,7 +73,7 @@ func (og *OllamaGenerator) Generate(ctx context.Context, question, contextText s
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := og.client.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("failed to call Ollama: %w", err)
 	}

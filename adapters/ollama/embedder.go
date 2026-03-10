@@ -11,6 +11,7 @@ import (
 type OllamaEmbedder struct {
 	ModelName string
 	BaseURL   string
+	client    *http.Client
 }
 
 type embedRequest struct {
@@ -26,6 +27,7 @@ func NewOllamaEmbedder(modelName, baseURL string) *OllamaEmbedder {
 	return &OllamaEmbedder{
 		ModelName: modelName,
 		BaseURL:   baseURL,
+		client:    &http.Client{},
 	}
 }
 
@@ -68,8 +70,11 @@ func (o *OllamaEmbedder) send(ctx context.Context, texts []string) ([][]float32,
 	}
 	request.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{}
-	response, err := client.Do(request)
+	response, err := o.client.Do(request)
+	if err != nil {
+		return nil, err
+	}
+	defer response.Body.Close()
 
 	var res embedResponse
 	if err := json.NewDecoder(response.Body).Decode(&res); err != nil {

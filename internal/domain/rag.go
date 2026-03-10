@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 )
 
 type RagEngine struct {
@@ -47,11 +48,14 @@ func (re *RagEngine) Ask(ctx context.Context, query AskQuery) (string, error) {
 		return re.formatSearchResults(query, chunks), nil
 	}
 
+	time.Sleep(200 * time.Millisecond)
+
 	if re.generator == nil || re.contextBuilder == nil {
 		return "", fmt.Errorf("generator or context builder not configured")
 	}
 
 	contextText := re.contextBuilder.BuildContext(chunks)
+
 	answer, err := re.generator.Generate(ctx, query.Question, contextText)
 	if err != nil {
 		return "", fmt.Errorf("failed to generate answer: %w", err)

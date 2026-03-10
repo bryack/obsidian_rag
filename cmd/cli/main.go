@@ -22,7 +22,7 @@ const (
 	maxContextSize  = 12000
 	embedModelName  = "bge-m3:latest"
 	llmURL          = "http://localhost:11434"
-	llmModelName    = "gemma3:4b"
+	llmModelName    = "qwen3.5:9b"
 )
 
 var (
@@ -89,11 +89,11 @@ func main() {
 			Generate: *llmFlag,
 		}
 
-		err := engine.Sync(ctx)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Index error: %v\n", err)
-			os.Exit(1)
-		}
+		// err := engine.Sync(ctx)
+		// if err != nil {
+		// 	fmt.Fprintf(os.Stderr, "Index error: %v\n", err)
+		// 	os.Exit(1)
+		// }
 
 		if *llmFlag {
 			fmt.Fprintf(os.Stderr, "AI Mode: Generating answer through %s...\n", llmModelName)
