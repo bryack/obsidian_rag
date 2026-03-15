@@ -10,13 +10,14 @@ import (
 type TestCase struct {
 	Name             string    `yaml:"name"`
 	Query            string    `yaml:"query"`
+	Description      string    `yaml:"description"`
 	RelevantChunks   []ChunkID `yaml:"relevant_chunks"`
 	MinPrecisionAt5  float64   `yaml:"min_precision_at_5"`
 	ExcludedPatterns []string  `yaml:"excluded_patterns,omitempty"`
 }
 
 type GroundTruth struct {
-	TestCases           []TestCase `yaml:"testcases"`
+	TestCases           []TestCase `yaml:"test_cases"`
 	MinAveragePrecision float64    `yaml:"min_average_precision"`
 	EvaluateTopK        int        `yaml:"evaluate_top_k"`
 }
