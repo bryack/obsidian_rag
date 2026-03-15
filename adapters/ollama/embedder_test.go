@@ -115,6 +115,9 @@ func BenchmarkOllamaEmbedder_Batch(b *testing.B) {
 }
 
 func TestOllamaEmbedder_SemanticSimilarity(t *testing.T) {
+	if testing.Short() {
+		t.Skip("test requires running Ollama")
+	}
 	const (
 		modelName = "bge-m3:latest"
 		baseURL   = "http://localhost:11434/api/embed"

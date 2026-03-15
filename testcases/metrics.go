@@ -32,11 +32,7 @@ func Evaluate(tc TestCase, docs []domain.Document, paramK int) (*EvaluationResul
 	for i := range docs {
 		isRelevant := false
 		for _, chunk := range tc.RelevantChunks {
-			ok, err := chunk.Match(docs[i])
-			if err != nil {
-				return nil, fmt.Errorf("failed to match doc: %w", err)
-			}
-			if !ok {
+			if ok := chunk.Match(docs[i]); !ok {
 				continue
 			}
 			isRelevant = true
@@ -71,17 +67,17 @@ func Evaluate(tc TestCase, docs []domain.Document, paramK int) (*EvaluationResul
 	return result, nil
 }
 
-func (c *ChunkID) Match(doc domain.Document) (bool, error) {
+func (c *ChunkID) Match(doc domain.Document) bool {
 	if normalizeFilePath(doc.FilePath) != normalizeFilePath(c.FilePath) {
-		return false, nil
+		return false
 	}
 
 	if len(c.HeaderPath) != 0 {
 		if !compareSlices(doc.HeaderPath, c.HeaderPath) {
-			return false, nil
+			return false
 		}
 	}
-	return true, nil
+	return true
 }
 
 func normalizeFilePath(path string) string {

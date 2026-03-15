@@ -39,7 +39,7 @@ type AskQuery struct {
 }
 
 func (re *RagEngine) Ask(ctx context.Context, query AskQuery) (string, error) {
-	chunks, err := re.searchChunks(ctx, query)
+	chunks, err := re.SearchChunks(ctx, query)
 	if err != nil {
 		return "", fmt.Errorf("failed to find chunks: %w", err)
 	}
@@ -77,7 +77,7 @@ func (re *RagEngine) formatSearchResults(query AskQuery, chunks []Document) stri
 	return builder.String()
 }
 
-func (re *RagEngine) searchChunks(ctx context.Context, query AskQuery) ([]Document, error) {
+func (re *RagEngine) SearchChunks(ctx context.Context, query AskQuery) ([]Document, error) {
 	vector, err := re.embedder.EmbedQuery(ctx, query.Question)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get vector for question %q: %w", query.Question, err)
