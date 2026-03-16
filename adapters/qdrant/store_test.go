@@ -50,7 +50,7 @@ func TestQdrant_Integration(t *testing.T) {
 	}
 
 	tokenizer := domain.StubTokenizer{}
-	sparseVector := tokenizer.ToSparseVector("question")
+	sparseVector := tokenizer.ToBM25Vector("question", nil)
 
 	err = store.Save(ctx, doc)
 	require.NoError(t, err)
@@ -219,7 +219,7 @@ func TestQdrant_Integration(t *testing.T) {
 		assert.NoError(t, err)
 
 		searchVector := make([]float32, 1024)
-		sparseVector := tokenizer.ToSparseVector("question")
+		sparseVector := tokenizer.ToBM25Vector("question", nil)
 		result, err := store.Search(ctx, searchVector, sparseVector)
 		require.NoError(t, err)
 

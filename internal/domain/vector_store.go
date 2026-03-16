@@ -32,7 +32,10 @@ type EmbeddingFormatter interface {
 }
 
 type Tokenizer interface {
-	ToSparseVector(text string) map[uint32]float32
+	// ExtractTerms returns term frequencies for BM25 statistics collection
+	ExtractTerms(text string) map[string]int
+	// ToBM25Vector returns BM25-weighted sparse vector using corpus statistics
+	ToBM25Vector(text string, stats *BM25Stats) map[uint32]float32
 }
 
 // Scope represents a filtering criterion for search operations.

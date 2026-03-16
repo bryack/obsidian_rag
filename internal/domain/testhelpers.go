@@ -88,7 +88,11 @@ func (e *SpyEmbedder) EmbedDocuments(ctx context.Context, texts []string) ([][]f
 
 type StubTokenizer struct{}
 
-func (st *StubTokenizer) ToSparseVector(text string) map[uint32]float32 {
+func (st *StubTokenizer) ExtractTerms(text string) map[string]int {
+	return map[string]int{"test": 1}
+}
+
+func (st *StubTokenizer) ToBM25Vector(text string, stats *BM25Stats) map[uint32]float32 {
 	return map[uint32]float32{1: 1.0}
 }
 

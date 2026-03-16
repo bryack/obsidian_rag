@@ -18,8 +18,8 @@ func TestCalculateIDF(t *testing.T) {
 }
 
 func TestCalculateTF(t *testing.T) {
-	stats := NewBM25Stats(1.5, 0.75)
 	t.Run("term frequency saturation", func(t *testing.T) {
+		stats := NewBM25Stats(1.5, 0.75)
 		stats.AverageLength = 100
 		docLen := 100
 
@@ -34,6 +34,7 @@ func TestCalculateTF(t *testing.T) {
 	})
 
 	t.Run("length penalty", func(t *testing.T) {
+		stats := NewBM25Stats(1.5, 0.75)
 		stats.AverageLength = 100
 		tf1 := stats.CalculateTF(2, 50)
 		tf2 := stats.CalculateTF(2, 200)
@@ -44,6 +45,10 @@ func TestCalculateTF(t *testing.T) {
 
 func TestCalculateScore(t *testing.T) {
 	stats := NewBM25Stats(1.5, 0.75)
+	stats.DocsNumber = 1000
+	stats.AverageLength = 100
+	stats.DocFrequency["docker"] = 100
+	stats.DocFrequency["go"] = 50
 	queryTerms := map[string]int{"docker": 1, "go": 1}
 	docTerm := map[string]int{"docker": 1}
 
@@ -51,4 +56,8 @@ func TestCalculateScore(t *testing.T) {
 	score := stats.CalculateScore(queryTerms, docTerm, docLen)
 
 	assert.Equal(t, stats.CalculateTF(1, docLen)*stats.CalculateIDF("docker"), score)
+
+	docBoth := map[string]int{"docker": 1, "go": 1}
+	scoreBoth := stats.CalculateScore(queryTerms, docBoth, docLen)
+	assert.True(t, score < scoreBoth, "partial match should score lower than full match")
 }

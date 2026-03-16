@@ -10,7 +10,7 @@ func TestTokenizer_ToSparseVector(t *testing.T) {
 	tokenizer := NewTokenizer()
 	text := "North-Star"
 
-	sparse := tokenizer.ToSparseVector(text)
+	sparse := tokenizer.ExtractTerms(text)
 
 	assert.Len(t, sparse, 2)
 	for _, weight := range sparse {
@@ -23,7 +23,7 @@ func TestTokenizer_StopWords(t *testing.T) {
 
 	t.Run("ignores stop words", func(t *testing.T) {
 		text := "и, к, из, РЕДКО, the, and в Обсидиан"
-		vector := tokenizer.ToSparseVector(text)
+		vector := tokenizer.ExtractTerms(text)
 
 		assert.Equal(t, 1, len(vector))
 	})

@@ -18,6 +18,7 @@ type RagEngine struct {
 	contextBuilder ContextBuilder
 	generator      AnswerGenerator
 	batchSize      int
+	bm25Stats      *BM25Stats
 }
 
 func NewRagEngine(repo NoteRepository, store VectorStore, parser Parser, tokenizer Tokenizer, embedder Embedder, formatter EmbeddingFormatter) *RagEngine {
@@ -29,6 +30,7 @@ func NewRagEngine(repo NoteRepository, store VectorStore, parser Parser, tokeniz
 		tokenizer: tokenizer,
 		formatter: formatter,
 		batchSize: 8,
+		bm25Stats: NewBM25Stats(1.5, 0.75),
 	}
 }
 
@@ -83,7 +85,7 @@ func (re *RagEngine) SearchChunks(ctx context.Context, query AskQuery) ([]Docume
 		return nil, fmt.Errorf("failed to get vector for question %q: %w", query.Question, err)
 	}
 
-	sparse := re.tokenizer.ToSparseVector(query.Question)
+	sparse := re.tokenizer.ToBM25Vector(query.Question, re.bm25Stats)
 
 	searchQuery := SearchQuery{
 		DenseVector:  vector,
@@ -123,6 +125,39 @@ func (re *RagEngine) Sync(ctx context.Context) error {
 		}
 	}
 
+	// ═══════════════════════════════════════════════════════════
+	// PASS 1: Collect BM25 Statistics (ALL documents!)
+	// ═══════════════════════════════════════════════════════════
+
+	stats := NewBM25Stats(1.5, 0.75)
+	var totalLen int
+
+	for _, doc := range docs {
+		chunks, err := re.prepareChunks(doc)
+		if err != nil {
+			return fmt.Errorf("failed to prepare chunks: %w", err)
+		}
+		for _, chunk := range chunks {
+			terms := re.tokenizer.ExtractTerms(chunk.Content)
+			docLen := SumDocFrequencies(terms)
+			totalLen += docLen
+			stats.DocsNumber++
+
+			for term := range terms {
+				stats.DocFrequency[term]++
+			}
+		}
+	}
+
+	if stats.DocsNumber > 0 {
+		stats.AverageLength = float64(totalLen) / float64(stats.DocsNumber)
+	}
+
+	// ═══════════════════════════════════════════════════════════
+	// PASS 2: Index with BM25 Weights (only needsSync)
+	// ═══════════════════════════════════════════════════════════
+
+	re.bm25Stats = stats
 	var buffer []Document
 	for i, doc := range docs {
 		if re.needsSync(doc, hashes) {
@@ -130,6 +165,14 @@ func (re *RagEngine) Sync(ctx context.Context) error {
 			if err != nil {
 				return fmt.Errorf("failed to prepare chunks: %w", err)
 			}
+
+			for idx := range parcedChunks {
+				parcedChunks[idx].Vector.SparseVector = re.tokenizer.ToBM25Vector(
+					parcedChunks[idx].Content,
+					re.bm25Stats,
+				)
+			}
+
 			buffer = append(buffer, parcedChunks...)
 			if len(buffer) >= re.batchSize {
 				if err := re.processBatch(ctx, buffer); err != nil {
@@ -149,6 +192,14 @@ func (re *RagEngine) Sync(ctx context.Context) error {
 
 	fmt.Fprintf(os.Stderr, "Indexed %d notes\n", len(docs))
 	return nil
+}
+
+func SumDocFrequencies(docFrequency map[string]int) int {
+	docLen := 0
+	for _, freq := range docFrequency {
+		docLen += freq
+	}
+	return docLen
 }
 
 func (re *RagEngine) needsSync(doc Document, existingHashes map[string]string) bool {
@@ -181,7 +232,7 @@ func (re *RagEngine) processBatch(ctx context.Context, batch []Document) error {
 		if content == "" {
 			batch[i].Vector.Dense = make([]float32, 1024)
 		} else {
-			batch[i].Vector.SparseVector = re.tokenizer.ToSparseVector(content)
+			// batch[i].Vector.SparseVector = re.tokenizer.ToBM25Vector(content, re.bm25Stats)
 			formatted := re.formatter.Format(c)
 			textToEmbed = append(textToEmbed, formatted)
 			indicesToEmbed = append(indicesToEmbed, i)
