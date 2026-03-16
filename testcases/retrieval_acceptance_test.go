@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/bryack/obsidian_rag/adapters/filerepo"
@@ -126,6 +127,14 @@ func logResults(t *testing.T, docs []domain.Document, tc TestCase) {
 				break
 			}
 		}
+
+		for _, pattern := range tc.ExcludedPatterns {
+			if strings.Contains(doc.FilePath, pattern) {
+				marker = "[✗]"
+				break
+			}
+		}
+
 		t.Logf("%s [%d] Score: %.4f | %s\n", marker, i+1, doc.Score, doc.FilePath)
 		if len(doc.HeaderPath) > 0 {
 			t.Logf("    Section: %v", doc.HeaderPath)
