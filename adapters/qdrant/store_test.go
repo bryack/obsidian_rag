@@ -201,4 +201,29 @@ func TestQdrant_Integration(t *testing.T) {
 			assert.NotContains(t, res.FilePath, "personal/", "Result should NOT be from 'personal/' folder")
 		}
 	})
+
+	t.Run("DeleteByFilePaths", func(t *testing.T) {
+		err := store.clear(ctx)
+		require.NoError(t, err)
+
+		docs := []domain.Document{
+			{FilePath: "work/report.md", Content: "Work report content", Vector: domain.VectorData{Dense: make([]float32, 1024)}},
+			{FilePath: "work/notes.md", Content: "Meeting notes", Vector: domain.VectorData{Dense: make([]float32, 1024)}},
+			{FilePath: "personal/diary.md", Content: "Personal diary entry", Vector: domain.VectorData{Dense: make([]float32, 1024)}},
+		}
+
+		require.NoError(t, store.SaveBatch(ctx, docs))
+		filePaths := []string{"work/report.md", "work/notes.md"}
+
+		err = store.DeleteByFilePaths(ctx, filePaths)
+		assert.NoError(t, err)
+
+		searchVector := make([]float32, 1024)
+		sparseVector := tokenizer.ToSparseVector("question")
+		result, err := store.Search(ctx, searchVector, sparseVector)
+		require.NoError(t, err)
+
+		assert.Len(t, result, 1)
+		assert.Equal(t, "personal/diary.md", result[0].FilePath)
+	})
 }

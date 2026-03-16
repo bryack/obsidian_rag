@@ -1,12 +1,15 @@
 package domain
 
-import "context"
+import (
+	"context"
+)
 
 type SpyVectorStore struct {
 	SaveCalled      int
 	Hashes          map[string]string
 	Documents       []Document
 	LastSearchScope Scope
+	DeletedPaths    []string
 }
 
 func (s *SpyVectorStore) Save(ctx context.Context, doc Document) error {
@@ -39,6 +42,14 @@ func (s *SpyVectorStore) SaveBatch(ctx context.Context, docs []Document) error {
 func (s *SpyVectorStore) SearchWithScope(ctx context.Context, query SearchQuery) ([]Document, error) {
 	s.LastSearchScope = query.Scope
 	return s.Documents, nil
+}
+
+func (s *SpyVectorStore) DeleteByFilePaths(ctx context.Context, filePaths []string) error {
+	s.DeletedPaths = append(s.DeletedPaths, filePaths...)
+	for _, path := range filePaths {
+		delete(s.Hashes, path)
+	}
+	return nil
 }
 
 type StubNoteRepository struct {

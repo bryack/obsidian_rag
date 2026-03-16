@@ -56,6 +56,7 @@ func TestRAGCLI(t *testing.T) {
 		QdrantAddr:   grpcEndpoint,
 		OllamaURL:    fakeOllama,
 	}
+	require.NoError(t, driver.Index())
 	specifications.RAGSpecification(t, &driver)
 }
 

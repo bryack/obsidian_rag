@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"fmt"
 	"os/exec"
 	"strings"
 )
@@ -22,8 +23,23 @@ func (d *Driver) Ask(question string) (string, error) {
 
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("%w: %s", err, string(out))
 	}
 
 	return strings.TrimSpace(string(out)), nil
+}
+
+func (d *Driver) Index() error {
+	cmd := exec.Command(d.PathToBinary,
+		"-qdrant", d.QdrantAddr,
+		"-ollama", d.OllamaURL,
+		"index", d.VaultPath)
+	cmd.Dir = d.WorkingDir
+
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("%w: %s", err, string(out))
+	}
+
+	return nil
 }

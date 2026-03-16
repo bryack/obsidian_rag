@@ -179,3 +179,29 @@ func TestRagEngine_Ask_WithGeneration(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "ответ от ИИ", answer)
 }
+
+func TestSync_RemovesOrphanRecords(t *testing.T) {
+	formatter := &DefaultFormatter{}
+	tokenizer := &StubTokenizer{}
+	store := &SpyVectorStore{
+		Hashes: map[string]string{
+			"old.md":  "h1",
+			"kept.md": "h2",
+		},
+	}
+
+	repo := &StubNoteRepository{Docs: []Document{
+		{FilePath: "kept.md", Hash: "h2"},
+		{FilePath: "new.md", Hash: "h3"},
+	}}
+	parser := &StubParser{}
+	embedder := &SpyEmbedder{}
+
+	engine := NewRagEngine(repo, store, parser, tokenizer, embedder, formatter)
+	err := engine.Sync(context.Background())
+	require.NoError(t, err)
+
+	assert.Contains(t, store.DeletedPaths, "old.md")
+	assert.Contains(t, store.Hashes, "kept.md")
+	assert.NotContains(t, store.Hashes, "old.md")
+}

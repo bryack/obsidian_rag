@@ -116,6 +116,13 @@ func (re *RagEngine) Sync(ctx context.Context) error {
 
 	fmt.Fprintf(os.Stderr, "Debug: Found %d existing hashes in DB\n", len(hashes))
 
+	orphans := findOrphanPaths(hashes, docs)
+	if len(orphans) > 0 {
+		if err := re.store.DeleteByFilePaths(ctx, orphans); err != nil {
+			return fmt.Errorf("failed to delete orphans: %w", err)
+		}
+	}
+
 	var buffer []Document
 	for i, doc := range docs {
 		if re.needsSync(doc, hashes) {
@@ -197,6 +204,21 @@ func (re *RagEngine) processBatch(ctx context.Context, batch []Document) error {
 		return fmt.Errorf("failed to save batch: %w", err)
 	}
 	return nil
+}
+
+func findOrphanPaths(hashes map[string]string, docs []Document) []string {
+	currentPath := make(map[string]bool)
+	for _, doc := range docs {
+		currentPath[doc.FilePath] = true
+	}
+
+	orphans := make([]string, 0, len(hashes))
+	for path := range hashes {
+		if !currentPath[path] {
+			orphans = append(orphans, path)
+		}
+	}
+	return orphans
 }
 
 func (re *RagEngine) SetGenerator(generator AnswerGenerator, contextBuilder ContextBuilder) {

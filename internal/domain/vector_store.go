@@ -8,6 +8,7 @@ type VectorStore interface {
 	GetAllHashes(ctx context.Context) (map[string]string, error)
 	SaveBatch(ctx context.Context, docs []Document) error
 	SearchWithScope(ctx context.Context, query SearchQuery) ([]Document, error)
+	DeleteByFilePaths(ctx context.Context, filePaths []string) error
 }
 
 type SearchQuery struct {

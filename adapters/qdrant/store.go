@@ -394,3 +394,18 @@ func valueToStrings(value *qdrant.Value) []string {
 
 	return result
 }
+
+func (q *QdrantStore) DeleteByFilePaths(ctx context.Context, filePaths []string) error {
+	if len(filePaths) == 0 {
+		return nil
+	}
+	_, err := q.client.Delete(ctx, &qdrant.DeletePoints{
+		CollectionName: collectionName,
+		Points: qdrant.NewPointsSelectorFilter(&qdrant.Filter{
+			Must: []*qdrant.Condition{
+				qdrant.NewMatchKeywords(filepath, filePaths...),
+			},
+		}),
+	})
+	return err
+}
