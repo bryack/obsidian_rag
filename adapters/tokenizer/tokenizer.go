@@ -41,7 +41,7 @@ func (t *Tokenizer) ToBM25Vector(text string, stats *domain.BM25Stats) map[uint3
 	docFrequency := t.ExtractTerms(text)
 	h := fnv.New32a()
 
-	docLen := domain.SumDocFrequencies(docFrequency)
+	docLen := domain.SumTermFrequencies(docFrequency)
 
 	for term := range docFrequency {
 		h.Reset()

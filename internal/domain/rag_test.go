@@ -9,7 +9,7 @@ import (
 )
 
 func TestRagEngine_Ask(t *testing.T) {
-
+	statsRepo := &StubStatsRepository{}
 	t.Run("real search", func(t *testing.T) {
 		ctx := context.Background()
 		formatter := &DefaultFormatter{}
@@ -23,7 +23,7 @@ func TestRagEngine_Ask(t *testing.T) {
 		parser := &StubParser{}
 		embedder := &SpyEmbedder{}
 
-		engine := NewRagEngine(repo, store, parser, tokenizer, embedder, formatter)
+		engine := NewRagEngine(repo, store, parser, tokenizer, embedder, formatter, statsRepo)
 		engine.Sync(ctx)
 
 		query := AskQuery{
@@ -38,6 +38,7 @@ func TestRagEngine_Ask(t *testing.T) {
 }
 
 func TestRagEngine_Sync(t *testing.T) {
+	statsRepo := &StubStatsRepository{}
 	formatter := &DefaultFormatter{}
 	t.Run("happy path", func(t *testing.T) {
 		ctx := context.Background()
@@ -49,7 +50,7 @@ func TestRagEngine_Sync(t *testing.T) {
 		parser := &StubParser{Items: []Document{{FilePath: "note.md", Hash: "v1", Content: "Hello!"}}}
 		embedder := &SpyEmbedder{vector: []float32{0.1, 0.2}}
 
-		engine := NewRagEngine(repo, store, parser, tokenizer, embedder, formatter)
+		engine := NewRagEngine(repo, store, parser, tokenizer, embedder, formatter, statsRepo)
 
 		err := engine.Sync(ctx)
 		assert.NoError(t, err)
@@ -78,7 +79,7 @@ func TestRagEngine_Sync(t *testing.T) {
 		parser := &StubParser{}
 		embedder := &SpyEmbedder{vector: []float32{0.1, 0.2}}
 
-		engine := NewRagEngine(repo, store, parser, tokenizer, embedder, formatter)
+		engine := NewRagEngine(repo, store, parser, tokenizer, embedder, formatter, statsRepo)
 
 		err := engine.Sync(context.Background())
 		assert.NoError(t, err)
@@ -98,7 +99,7 @@ func TestRagEngine_Sync(t *testing.T) {
 		}}
 		embedder := &SpyEmbedder{vector: []float32{0.1}}
 
-		engine := NewRagEngine(repo, store, parser, tokenizer, embedder, formatter)
+		engine := NewRagEngine(repo, store, parser, tokenizer, embedder, formatter, statsRepo)
 		err := engine.Sync(context.Background())
 		assert.NoError(t, err)
 
@@ -119,7 +120,7 @@ func TestRagEngine_Sync(t *testing.T) {
 		}}
 		embedder := &SpyEmbedder{vector: []float32{0.1}}
 
-		engine := NewRagEngine(repo, store, parser, tokenizer, embedder, formatter)
+		engine := NewRagEngine(repo, store, parser, tokenizer, embedder, formatter, statsRepo)
 		err := engine.Sync(context.Background())
 		assert.NoError(t, err)
 
@@ -132,6 +133,7 @@ func TestRagEngine_Sync(t *testing.T) {
 }
 
 func TestRagEngine_AskWithScope(t *testing.T) {
+	statsRepo := &StubStatsRepository{}
 	ctx := context.Background()
 
 	tokenizer := &StubTokenizer{}
@@ -149,7 +151,7 @@ func TestRagEngine_AskWithScope(t *testing.T) {
 	parser := &StubParser{Items: []Document{{FilePath: "work/note.md", Hash: "v1", Content: "test"}}}
 	embedder := &SpyEmbedder{vector: []float32{0.1, 0.2}}
 	formatter := &DefaultFormatter{}
-	engine := NewRagEngine(repo, store, parser, tokenizer, embedder, formatter)
+	engine := NewRagEngine(repo, store, parser, tokenizer, embedder, formatter, statsRepo)
 
 	scope := FolderScope{Path: "work/"}
 	_, err := engine.Ask(ctx, AskQuery{Question: "test", Scope: scope})
@@ -158,6 +160,7 @@ func TestRagEngine_AskWithScope(t *testing.T) {
 }
 
 func TestRagEngine_Ask_WithGeneration(t *testing.T) {
+	statsRepo := &StubStatsRepository{}
 	ctx := context.Background()
 
 	store := &SpyVectorStore{
@@ -166,7 +169,7 @@ func TestRagEngine_Ask_WithGeneration(t *testing.T) {
 	generator := &SpyGenerator{Answer: "ответ от ИИ"}
 	contextBuilder := &StubContextBuilder{}
 
-	engine := NewRagEngine(nil, store, nil, &StubTokenizer{}, &SpyEmbedder{}, &DefaultFormatter{})
+	engine := NewRagEngine(nil, store, nil, &StubTokenizer{}, &SpyEmbedder{}, &DefaultFormatter{}, statsRepo)
 	engine.SetGenerator(generator, contextBuilder)
 
 	query := AskQuery{
@@ -181,6 +184,7 @@ func TestRagEngine_Ask_WithGeneration(t *testing.T) {
 }
 
 func TestSync_RemovesOrphanRecords(t *testing.T) {
+	statsRepo := &StubStatsRepository{}
 	formatter := &DefaultFormatter{}
 	tokenizer := &StubTokenizer{}
 	store := &SpyVectorStore{
@@ -197,7 +201,7 @@ func TestSync_RemovesOrphanRecords(t *testing.T) {
 	parser := &StubParser{}
 	embedder := &SpyEmbedder{}
 
-	engine := NewRagEngine(repo, store, parser, tokenizer, embedder, formatter)
+	engine := NewRagEngine(repo, store, parser, tokenizer, embedder, formatter, statsRepo)
 	err := engine.Sync(context.Background())
 	require.NoError(t, err)
 

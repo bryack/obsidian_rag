@@ -52,6 +52,11 @@ type ContextBuilder interface {
 	BuildContext(chunks []Document) string
 }
 
+type StatsRepository interface {
+	Save(stats *BM25Stats) error
+	Load() (*BM25Stats, error)
+}
+
 type Document struct {
 	FilePath string `yaml:"file_path"`
 	Hash     string `yaml:"hash"`

@@ -19,9 +19,10 @@ type RagEngine struct {
 	generator      AnswerGenerator
 	batchSize      int
 	bm25Stats      *BM25Stats
+	statsRepo      StatsRepository
 }
 
-func NewRagEngine(repo NoteRepository, store VectorStore, parser Parser, tokenizer Tokenizer, embedder Embedder, formatter EmbeddingFormatter) *RagEngine {
+func NewRagEngine(repo NoteRepository, store VectorStore, parser Parser, tokenizer Tokenizer, embedder Embedder, formatter EmbeddingFormatter, statsRepo StatsRepository) *RagEngine {
 	return &RagEngine{
 		store:     store,
 		repo:      repo,
@@ -31,6 +32,7 @@ func NewRagEngine(repo NoteRepository, store VectorStore, parser Parser, tokeniz
 		formatter: formatter,
 		batchSize: 8,
 		bm25Stats: NewBM25Stats(1.5, 0.75),
+		statsRepo: statsRepo,
 	}
 }
 
@@ -139,7 +141,7 @@ func (re *RagEngine) Sync(ctx context.Context) error {
 		}
 		for _, chunk := range chunks {
 			terms := re.tokenizer.ExtractTerms(chunk.Content)
-			docLen := SumDocFrequencies(terms)
+			docLen := SumTermFrequencies(terms)
 			totalLen += docLen
 			stats.DocsNumber++
 
@@ -194,7 +196,7 @@ func (re *RagEngine) Sync(ctx context.Context) error {
 	return nil
 }
 
-func SumDocFrequencies(docFrequency map[string]int) int {
+func SumTermFrequencies(docFrequency map[string]int) int {
 	docLen := 0
 	for _, freq := range docFrequency {
 		docLen += freq

@@ -2,6 +2,7 @@ package domain
 
 import (
 	"context"
+	"fmt"
 )
 
 type SpyVectorStore struct {
@@ -108,4 +109,20 @@ type StubContextBuilder struct{}
 
 func (cb *StubContextBuilder) BuildContext(chunks []Document) string {
 	return ""
+}
+
+type StubStatsRepository struct {
+	Stats *BM25Stats
+}
+
+func (s *StubStatsRepository) Save(stats *BM25Stats) error {
+	s.Stats = stats
+	return nil
+}
+
+func (s *StubStatsRepository) Load() (*BM25Stats, error) {
+	if s.Stats == nil {
+		return nil, fmt.Errorf("stats not found")
+	}
+	return s.Stats, nil
 }
