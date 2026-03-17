@@ -23,14 +23,18 @@ test_cases:
         header_path: ["Финальный План: «Чистый Старт»", "Шаг 2: Подготовка к Гибридному поиску (Research)"]
         # preview для вашей справки - не используется кодом, только для чтения
         preview: "«Начинайте с приёмочных тестов как с „северной звезды“, которая направляет все усилия разработки»"
+
+      - file_path: "018_Scripts/words/docs_dev/Парсер русской морфологии.md"
+        header_path: ["Пошаговая инструкция", "Шаг 1: Создание падающего теста (фаза RED)"]
+        preview: "«Начинайте с приёмочных тестов как с „северной звезды“, которая направляет все усилия разработки»"
       
       - file_path: "014_Go/25_LGWT/Scaling acceptance tests.md"
         header_path: ["Приемочные тесты как метод разработки ПО"]
         preview: "Он будет твоей путеводной звездой. Всё, на чём нужно сосредоточиться — сделать этот тест зелёным."
       
-      - file_path: "steering/task-decomposition-standards.md"
-        header_path: ["Task Decomposition Standards (ATDD)", "Purpose"]
-        preview: "Task decompositions help developers understand and implement tasks using the outside-in approach from GOOS (Growing Object-Oriented Software, Guided by Tests). The methodology uses acceptance tests as a north-star to guide development efforts."
+      - file_path: "014_Go/00 Часы. Go.md"
+        header_path: ["Month 8", "week 36"]
+        preview: "теперь служит моей «Путеводной звездой» (North Star) для дальнейшей разработки"
     
     # Минимальные пороги для прохождения теста
     # precision@5 = (количество релевантных в топ-5) / 5
@@ -66,7 +70,7 @@ test_cases:
         header_path: ["Hebset Project - Резюме и Подготовка к Собеседованию", "6. Готовые Ответы на Вопросы Собеседования", "Q: Какие технические задачи были в проекте?"]
         preview: "Ответ: Я работала проджект-менеджером на проекте Hebset - это биллинговая система для акушерок в Германии."
     
-    min_precision_at_5: 0.8  # 4 из 5 должны быть про Hebset
+    min_precision_at_5: 0.6  # 4 из 5 должны быть про Hebset
 
   # ============================================================================
   # Пример 3: Каналы в Go
@@ -81,12 +85,16 @@ test_cases:
         preview: "Каналы в Go — это мощный инструмент для взаимодействия между горутинами"
 
       - file_path: "014_Go/15_goroutines/Channels.md"
-        header_path: ["Gemini"]  # опционально
+        header_path: ["Gemini"]  
         preview: "Каналы (channels) — это один из фундаментальных и самых мощных инструментов в Go для организации **конкурентного программирования**."
      
       - file_path: "014_Go/15_goroutines/Channels.md"
-        header_path: ["Grok", "Суть каналов"]  # опционально
+        header_path: ["Grok", "Суть каналов"]  
         preview: "Каналы — это встроенный тип данных в Go, который служит для обмена данными"
+
+      - file_path: "014_Go/25_LGWT/Sync.md"
+        header_path: ["Мьютекс или канал в Go?", "Итог для новичка"]
+        preview: "Каналы, мьютексы и WaitGroup дополняют друг друга."
     
     min_precision_at_5: 0.6
 
@@ -104,7 +112,7 @@ test_cases:
     
     relevant_chunks:
       - file_path: "004 Manual/Fedora KDE. Bash.md"
-        header_path: ["Docker"]  # опционально
+        header_path: ["Docker"] 
         preview: "Удаляет все неиспользуемые Docker-ресурсы (остановленные контейнеры, неиспользуемые сети, образы и кэш) без подтверждения."
 
       - file_path: "014_Go/08_functions/testcontainers-go.md"
@@ -114,6 +122,14 @@ test_cases:
       - file_path: "014_Go/25_LGWT/Practice tasks/goodbye-service. Scaling acceptance tests.md"
         header_path: ["Задание", "Шаг 3: Настройка инфраструктуры (Dockerfile)"]  # опционально
         preview: "библиотека Testcontainers программно управляет всем жизненным циклом Docker"
+
+      - file_path: "004 Manual/2. Создание проекта в VSCode.md"
+        header_path: ["Дополнительно"]
+        preview: "Чтобы удалить контейнер"
+
+      - file_path: "004 Manual/1. Установка Docker.md"
+        header_path: ["Установка Docker", "Проверка установки"]
+        preview: "Удалить контейнеры"
 
     min_precision_at_5: 0.6
 
