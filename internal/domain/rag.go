@@ -8,6 +8,12 @@ import (
 	"time"
 )
 
+const (
+	defaultK1        = 1.5
+	defaultB         = 0.75
+	defaultBatchSize = 8
+)
+
 type RagEngine struct {
 	repo           NoteRepository
 	store          VectorStore
@@ -30,8 +36,8 @@ func NewRagEngine(repo NoteRepository, store VectorStore, parser Parser, tokeniz
 		embedder:  embedder,
 		tokenizer: tokenizer,
 		formatter: formatter,
-		batchSize: 8,
-		bm25Stats: NewBM25Stats(1.5, 0.75),
+		batchSize: defaultBatchSize,
+		bm25Stats: NewBM25Stats(defaultK1, defaultB),
 		statsRepo: statsRepo,
 	}
 }
@@ -52,6 +58,7 @@ func (re *RagEngine) Ask(ctx context.Context, query AskQuery) (string, error) {
 		return re.formatSearchResults(query, chunks), nil
 	}
 
+	// Debounce: give the system time to stabilize before generation
 	time.Sleep(200 * time.Millisecond)
 
 	if re.generator == nil || re.contextBuilder == nil {
@@ -82,6 +89,13 @@ func (re *RagEngine) formatSearchResults(query AskQuery, chunks []Document) stri
 }
 
 func (re *RagEngine) SearchChunks(ctx context.Context, query AskQuery) ([]Document, error) {
+	if re.bm25Stats == nil || re.bm25Stats.DocsNumber == 0 {
+		stats, err := re.statsRepo.Load()
+		if err != nil {
+			return nil, fmt.Errorf("BM25 stats not available: run index first: %w", err)
+		}
+		re.bm25Stats = stats
+	}
 	vector, err := re.embedder.EmbedQuery(ctx, query.Question)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get vector for question %q: %w", query.Question, err)
@@ -131,13 +145,34 @@ func (re *RagEngine) Sync(ctx context.Context) error {
 	// PASS 1: Collect BM25 Statistics (ALL documents!)
 	// ═══════════════════════════════════════════════════════════
 
-	stats := NewBM25Stats(1.5, 0.75)
+	stats, err := re.collectBM25Stats(docs)
+	if err != nil {
+		return fmt.Errorf("failed to collect BM25 stats: %w", err)
+	}
+
+	// ═══════════════════════════════════════════════════════════
+	// PASS 2: Index with BM25 Weights (only needsSync)
+	// ═══════════════════════════════════════════════════════════
+
+	if err = re.indexDocuments(ctx, docs, hashes, stats); err != nil {
+		return fmt.Errorf("failed to index documents: %w", err)
+	}
+
+	fmt.Fprintf(os.Stderr, "Indexed %d notes\n", len(docs))
+	if err := re.statsRepo.Save(re.bm25Stats); err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: failed to save BM25 stats: %v\n", err)
+	}
+	return nil
+}
+
+func (re *RagEngine) collectBM25Stats(docs []Document) (*BM25Stats, error) {
+	stats := NewBM25Stats(defaultK1, defaultB)
 	var totalLen int
 
 	for _, doc := range docs {
 		chunks, err := re.prepareChunks(doc)
 		if err != nil {
-			return fmt.Errorf("failed to prepare chunks: %w", err)
+			return nil, fmt.Errorf("failed to prepare chunks: %w", err)
 		}
 		for _, chunk := range chunks {
 			terms := re.tokenizer.ExtractTerms(chunk.Content)
@@ -154,11 +189,10 @@ func (re *RagEngine) Sync(ctx context.Context) error {
 	if stats.DocsNumber > 0 {
 		stats.AverageLength = float64(totalLen) / float64(stats.DocsNumber)
 	}
+	return stats, nil
+}
 
-	// ═══════════════════════════════════════════════════════════
-	// PASS 2: Index with BM25 Weights (only needsSync)
-	// ═══════════════════════════════════════════════════════════
-
+func (re *RagEngine) indexDocuments(ctx context.Context, docs []Document, hashes map[string]string, stats *BM25Stats) error {
 	re.bm25Stats = stats
 	var buffer []Document
 	for i, doc := range docs {
@@ -191,8 +225,6 @@ func (re *RagEngine) Sync(ctx context.Context) error {
 	if len(buffer) > 0 {
 		return re.processBatch(ctx, buffer)
 	}
-
-	fmt.Fprintf(os.Stderr, "Indexed %d notes\n", len(docs))
 	return nil
 }
 
@@ -234,7 +266,6 @@ func (re *RagEngine) processBatch(ctx context.Context, batch []Document) error {
 		if content == "" {
 			batch[i].Vector.Dense = make([]float32, 1024)
 		} else {
-			// batch[i].Vector.SparseVector = re.tokenizer.ToBM25Vector(content, re.bm25Stats)
 			formatted := re.formatter.Format(c)
 			textToEmbed = append(textToEmbed, formatted)
 			indicesToEmbed = append(indicesToEmbed, i)
