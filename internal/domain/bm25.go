@@ -10,28 +10,28 @@ import "math"
 type BM25Stats struct {
 	// DocsNumber — общее количество документов (чанков) в корпусе.
 	// Используется для расчёта IDF (Inverse Document Frequency).
-	DocsNumber int
+	DocsNumber int `json:"docs_number"`
 
 	// AverageLength — средняя длина документа в термах (словах после токенизации).
 	// Используется для нормализации длины документа в формуле TF.
-	AverageLength float64
+	AverageLength float64 `json:"average_length"`
 
 	// DocFrequency — карта частоты документов (document frequency).
 	// Ключ: терм (строка), Значение: сколько документов содержат этот терм.
 	// Используется для определения редкости терма в корпусе.
-	DocFrequency map[string]int
+	DocFrequency map[string]int `json:"doc_frequency"`
 
-	// k1 — параметр насыщения частоты терма (term frequency saturation).
+	// K1 — параметр насыщения частоты терма (term frequency saturation).
 	// Контролирует, насколько сильно влияет повторение терма в документе.
-	// При k1=0 влияние линейное, при k1-∞ почти постоянное (сатурация).
+	// При K1=0 влияние линейное, при K1-∞ почти постоянное (сатурация).
 	// Обычные значения: 1.2–2.0, по умолчанию 1.5.
-	k1 float64
+	K1 float64 `json:"k1"`
 
-	// b — параметр нормализации длины документа.
+	// B — параметр нормализации длины документа.
 	// Контролирует штраф за длинные документы.
-	// При b=0 длина не учитывается, при b=1 полная нормализация.
+	// При B=0 длина не учитывается, при B=1 полная нормализация.
 	// Обычное значение: 0.75.
-	b float64
+	B float64 `json:"b"`
 }
 
 // NewBM25Stats создаёт новый экземпляр BM25Stats с заданными параметрами.
@@ -46,8 +46,8 @@ func NewBM25Stats(k1, b float64) *BM25Stats {
 	}
 	return &BM25Stats{
 		DocFrequency: map[string]int{},
-		k1:           k1,
-		b:            b,
+		K1:           k1,
+		B:            b,
 	}
 }
 
@@ -78,8 +78,8 @@ func (s *BM25Stats) CalculateTF(freq int, docLen int) float64 {
 	if s.AverageLength == 0 {
 		return 0
 	}
-	numerator := float64(freq) * (s.k1 + 1)
-	denominator := float64(freq) + s.k1*(1-s.b+s.b*float64(docLen)/s.AverageLength)
+	numerator := float64(freq) * (s.K1 + 1)
+	denominator := float64(freq) + s.K1*(1-s.B+s.B*float64(docLen)/s.AverageLength)
 	return numerator / denominator
 }
 

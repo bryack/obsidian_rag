@@ -28,7 +28,7 @@ func TestCalculateTF(t *testing.T) {
 
 		assert.True(t, tf2 > tf1)
 		assert.True(t, tf2 < tf1*10)
-		maxTF := stats.k1 + 1 // теоретический максимум при freq -> ∞
+		maxTF := stats.K1 + 1 // теоретический максимум при freq -> ∞
 		assert.True(t, tf1 > 0 && tf1 <= maxTF)
 		assert.True(t, tf2 > 0 && tf2 <= maxTF)
 	})
