@@ -1,11 +1,12 @@
 [![Contributors](https://img.shields.io/github/contributors/bryack/obsidian_rag.svg?style=flat)](https://github.com/bryack/obsidian_rag/graphs/contributors)
 [![Stargazers](https://img.shields.io/github/stars/bryack/obsidian_rag.svg?style=flat)](https://github.com/bryack/obsidian_rag/stargazers)
 [![Issues](https://img.shields.io/github/issues/bryack/obsidian_rag.svg?style=flat)](https://github.com/bryack/obsidian_rag/issues)
-[![LinkedIn](https://img.shields.io/badge/-LinkedIn-black.svg?style=flat&logo=linkedin&colorB=0077B5)](https://linkedin.com/in/anna-nurgaleeva-ba9a6338)
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-0077b5?logo=data:image/svg+xml;base64,PHN2ZyB3aWR0aD0nMjU2JyBoZWlnaHQ9JzI1NicgeG1sbnM9J2h0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnJyBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSd4TWlkWU1pZCcgdmlld0JveD0nMCAwIDI1NiAyNTYnPjxwYXRoIGQ9J00yMTguMTIzIDIxOC4xMjdoLTM3LjkzMXYtNTkuNDAzYzAtMTQuMTY1LS4yNTMtMzIuNC0xOS43MjgtMzIuNC0xOS43NTYgMC0yMi43NzkgMTUuNDM0LTIyLjc3OSAzMS4zNjl2NjAuNDNoLTM3LjkzVjk1Ljk2N2gzNi40MTN2MTYuNjk0aC41MWEzOS45MDcgMzkuOTA3IDAgMCAxIDM1LjkyOC0xOS43MzNjMzguNDQ1IDAgNDUuNTMzIDI1LjI4OCA0NS41MzMgNTguMTg2bC0uMDE2IDY3LjAxM1pNNTYuOTU1IDc5LjI3Yy0xMi4xNTcuMDAyLTIyLjAxNC05Ljg1Mi0yMi4wMTYtMjIuMDA5LS4wMDItMTIuMTU3IDkuODUxLTIyLjAxNCAyMi4wMDgtMjIuMDE2IDEyLjE1Ny0uMDAzIDIyLjAxNCA5Ljg1MSAyMi4wMTYgMjIuMDA4QTIyLjAxMyAyMi4wMTMgMCAwIDEgNTYuOTU1IDc5LjI3bTE4Ljk2NiAxMzguODU4SDM3Ljk1Vjk1Ljk2N2gzNy45N3YxMjIuMTZaTTIzNy4wMzMuMDE4SDE4Ljg5QzguNTgtLjA5OC4xMjUgOC4xNjEtLjAwMSAxOC40NzF2MjE5LjA1M2MuMTIyIDEwLjMxNSA4LjU3NiAxOC41ODIgMTguODkgMTguNDc0aDIxOC4xNDRjMTAuMzM2LjEyOCAxOC44MjMtOC4xMzkgMTguOTY2LTE4LjQ3NFYxOC40NTRjLS4xNDctMTAuMzMtOC42MzUtMTguNTg4LTE4Ljk2Ni0xOC40NTMnIGZpbGw9JyNmZmYnLz48L3N2Zz4K)](https://linkedin.com/in/anna-nurgaleeva-ba9a6338)
+[![Telegram](https://img.shields.io/badge/Telegram-2CA5E0?logo=Telegram&logoColor=2CA5E0&labelColor=white&color=2CA5E0)](https://t.me/bryacka)
 
 # Obsidian RAG: Персональный ИИ-ассистент для глубокого анализа знаний
 
-![Go](https://img.shields.io/badge/Go-00ADD8?style=flat&logo=go&logoColor=white) ![Qdrant](https://img.shields.io/badge/Qdrant-E94E1B?style=flat&logo=qdrant&logoColor=white) ![Ollama](https://img.shields.io/badge/Ollama-000000?style=flat) ![Docker](https://img.shields.io/badge/Docker-2496ED?style=flat&logo=docker&logoColor=white) ![License](https://img.shields.io/badge/License-MIT-green.svg)
+![Go](https://img.shields.io/badge/Go-00ADD8?style=flat&logo=go&logoColor=white) ![Qdrant](https://img.shields.io/badge/Vector_DB-Qdrant-green) ![Ollama](https://img.shields.io/badge/Ollama-Local%20LLM-black?logo=ollama) ![Goldmark](https://img.shields.io/badge/goldmark-md_parser-brightgreen) ![Docker](https://img.shields.io/badge/Docker-2496ED?style=flat&logo=docker&logoColor=white) 
 
 Obsidian RAG — это высокопроизводительная локальная система поиска и генерации ответов (Retrieval-Augmented Generation), разработанная специально для работы с объемными базами заметок в Obsidian.
 
@@ -38,9 +39,9 @@ Obsidian RAG — это высокопроизводительная локал�
 
 ```
 internal/domain/     # Ядро: RagEngine, BM25Stats, интерфейсы
-adapters/           # Реализации: Qdrant, Ollama, FileSystem, StatsRepo
-cmd/cli/           # CLI интерфейс
-testcases/         # Acceptance tests с ground truth
+adapters/            # Реализации: Qdrant, Ollama, FileSystem, StatsRepo
+cmd/cli/             # CLI интерфейс
+testcases/           # Acceptance tests с ground truth
 ```
 
 ## Быстрый старт
@@ -107,4 +108,5 @@ go test ./testcases/... -run TestRetrievalQualityEvaluation
 - LinkedIn: [Anna Nurgaleeva](https://www.linkedin.com/in/anna-nurgaleeva-ba9a6338)
 
 ---
-License: MIT
+
+![License](https://img.shields.io/badge/License-MIT-green.svg)
