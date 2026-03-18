@@ -3,6 +3,7 @@ package domain
 import (
 	"context"
 	"fmt"
+	"strings"
 )
 
 type SpyVectorStore struct {
@@ -98,17 +99,23 @@ func (st *StubTokenizer) ToBM25Vector(text string, stats *BM25Stats) map[uint32]
 }
 
 type SpyGenerator struct {
-	Answer string
+	Answer      string
+	LastContext string
 }
 
 func (g *SpyGenerator) Generate(ctx context.Context, question string, context string) (string, error) {
+	g.LastContext = context
 	return g.Answer, nil
 }
 
 type StubContextBuilder struct{}
 
 func (cb *StubContextBuilder) BuildContext(chunks []Document) string {
-	return ""
+	var result strings.Builder
+	for _, chunk := range chunks {
+		result.WriteString(chunk.Content)
+	}
+	return result.String()
 }
 
 type StubStatsRepository struct {

@@ -6,9 +6,10 @@
 
 # Obsidian RAG: Персональный ИИ-ассистент для глубокого анализа знаний
 
-![Go](https://img.shields.io/badge/Go-00ADD8?style=flat&logo=go&logoColor=white) ![Qdrant](https://img.shields.io/badge/Vector_DB-Qdrant-green) ![Ollama](https://img.shields.io/badge/Ollama-Local%20LLM-black?logo=ollama) ![Goldmark](https://img.shields.io/badge/goldmark-md_parser-brightgreen) ![Docker](https://img.shields.io/badge/Docker-2496ED?style=flat&logo=docker&logoColor=white) 
-
 Obsidian RAG — это высокопроизводительная локальная система поиска и генерации ответов (Retrieval-Augmented Generation), разработанная специально для работы с объемными базами заметок в Obsidian.
+
+![Go](https://img.shields.io/badge/Go-00ADD8?style=flat&logo=go&logoColor=white) ![Qdrant](https://img.shields.io/badge/Vector_DB-Qdrant-red) ![Ollama](https://img.shields.io/badge/Ollama-Local%20LLM-black?logo=ollama) ![Goldmark](https://img.shields.io/badge/md_parser-goldmark-orange) ![BM25](https://img.shields.io/badge/Okapi-BM25-yellow
+) ![Docker](https://img.shields.io/badge/Docker-2496ED?style=flat&logo=docker&logoColor=white) 
 
 ## Мотивация проекта
 

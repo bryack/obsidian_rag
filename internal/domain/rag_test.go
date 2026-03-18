@@ -153,6 +153,8 @@ func TestRagEngine_AskWithScope(t *testing.T) {
 	formatter := &DefaultFormatter{}
 	engine := NewRagEngine(repo, store, parser, tokenizer, embedder, formatter, statsRepo)
 
+	engine.Sync(ctx)
+
 	scope := FolderScope{Path: "work/"}
 	_, err := engine.Ask(ctx, AskQuery{Question: "test", Scope: scope})
 	assert.NoError(t, err)
@@ -162,15 +164,21 @@ func TestRagEngine_AskWithScope(t *testing.T) {
 func TestRagEngine_Ask_WithGeneration(t *testing.T) {
 	statsRepo := &StubStatsRepository{}
 	ctx := context.Background()
-
-	store := &SpyVectorStore{
-		Documents: []Document{{Content: "найденный контент"}},
+	repo := &StubNoteRepository{
+		Docs: []Document{{FilePath: "test.md", Hash: "v1", Content: "найденный контент"}},
 	}
+	parser := &StubParser{
+		Items: []Document{{FilePath: "test.md", Hash: "v1", Content: "найденный контент"}},
+	}
+
+	store := &SpyVectorStore{}
 	generator := &SpyGenerator{Answer: "ответ от ИИ"}
 	contextBuilder := &StubContextBuilder{}
 
-	engine := NewRagEngine(nil, store, nil, &StubTokenizer{}, &SpyEmbedder{}, &DefaultFormatter{}, statsRepo)
+	engine := NewRagEngine(repo, store, parser, &StubTokenizer{}, &SpyEmbedder{}, &DefaultFormatter{}, statsRepo)
 	engine.SetGenerator(generator, contextBuilder)
+
+	engine.Sync(ctx)
 
 	query := AskQuery{
 		Question: "как дела?",
@@ -181,6 +189,7 @@ func TestRagEngine_Ask_WithGeneration(t *testing.T) {
 	answer, err := engine.Ask(ctx, query)
 	assert.NoError(t, err)
 	assert.Equal(t, "ответ от ИИ", answer)
+	assert.Contains(t, generator.LastContext, "найденный контент")
 }
 
 func TestSync_RemovesOrphanRecords(t *testing.T) {
